@@ -1,0 +1,563 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		CC2B63CE2D89DAE400040DAC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CC2B63B32D89DAE200040DAC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CC2B63BA2D89DAE200040DAC;
+			remoteInfo = "Focus Totem";
+		};
+		CC2B63D82D89DAE400040DAC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CC2B63B32D89DAE200040DAC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CC2B63BA2D89DAE200040DAC;
+			remoteInfo = "Focus Totem";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		CC2B63BB2D89DAE200040DAC /* Focus Totem.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Focus Totem.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC2B63CD2D89DAE400040DAC /* Focus TotemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Focus TotemTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC2B63D72D89DAE400040DAC /* Focus TotemUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Focus TotemUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		CC2B63BD2D89DAE200040DAC /* Focus Totem */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Focus Totem";
+			sourceTree = "<group>";
+		};
+		CC2B63D02D89DAE400040DAC /* Focus TotemTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Focus TotemTests";
+			sourceTree = "<group>";
+		};
+		CC2B63DA2D89DAE400040DAC /* Focus TotemUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Focus TotemUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CC2B63B82D89DAE200040DAC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC2B63CA2D89DAE400040DAC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC2B63D42D89DAE400040DAC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		CC2B63B22D89DAE200040DAC = {
+			isa = PBXGroup;
+			children = (
+				CC2B63BD2D89DAE200040DAC /* Focus Totem */,
+				CC2B63D02D89DAE400040DAC /* Focus TotemTests */,
+				CC2B63DA2D89DAE400040DAC /* Focus TotemUITests */,
+				CC2B63BC2D89DAE200040DAC /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CC2B63BC2D89DAE200040DAC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CC2B63BB2D89DAE200040DAC /* Focus Totem.app */,
+				CC2B63CD2D89DAE400040DAC /* Focus TotemTests.xctest */,
+				CC2B63D72D89DAE400040DAC /* Focus TotemUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		CC2B63BA2D89DAE200040DAC /* Focus Totem */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC2B63E12D89DAE400040DAC /* Build configuration list for PBXNativeTarget "Focus Totem" */;
+			buildPhases = (
+				CC2B63B72D89DAE200040DAC /* Sources */,
+				CC2B63B82D89DAE200040DAC /* Frameworks */,
+				CC2B63B92D89DAE200040DAC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CC2B63BD2D89DAE200040DAC /* Focus Totem */,
+			);
+			name = "Focus Totem";
+			packageProductDependencies = (
+			);
+			productName = "Focus Totem";
+			productReference = CC2B63BB2D89DAE200040DAC /* Focus Totem.app */;
+			productType = "com.apple.product-type.application";
+		};
+		CC2B63CC2D89DAE400040DAC /* Focus TotemTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC2B63E42D89DAE400040DAC /* Build configuration list for PBXNativeTarget "Focus TotemTests" */;
+			buildPhases = (
+				CC2B63C92D89DAE400040DAC /* Sources */,
+				CC2B63CA2D89DAE400040DAC /* Frameworks */,
+				CC2B63CB2D89DAE400040DAC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CC2B63CF2D89DAE400040DAC /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CC2B63D02D89DAE400040DAC /* Focus TotemTests */,
+			);
+			name = "Focus TotemTests";
+			packageProductDependencies = (
+			);
+			productName = "Focus TotemTests";
+			productReference = CC2B63CD2D89DAE400040DAC /* Focus TotemTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		CC2B63D62D89DAE400040DAC /* Focus TotemUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC2B63E72D89DAE400040DAC /* Build configuration list for PBXNativeTarget "Focus TotemUITests" */;
+			buildPhases = (
+				CC2B63D32D89DAE400040DAC /* Sources */,
+				CC2B63D42D89DAE400040DAC /* Frameworks */,
+				CC2B63D52D89DAE400040DAC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CC2B63D92D89DAE400040DAC /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CC2B63DA2D89DAE400040DAC /* Focus TotemUITests */,
+			);
+			name = "Focus TotemUITests";
+			packageProductDependencies = (
+			);
+			productName = "Focus TotemUITests";
+			productReference = CC2B63D72D89DAE400040DAC /* Focus TotemUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CC2B63B32D89DAE200040DAC /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					CC2B63BA2D89DAE200040DAC = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					CC2B63CC2D89DAE400040DAC = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = CC2B63BA2D89DAE200040DAC;
+					};
+					CC2B63D62D89DAE400040DAC = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = CC2B63BA2D89DAE200040DAC;
+					};
+				};
+			};
+			buildConfigurationList = CC2B63B62D89DAE200040DAC /* Build configuration list for PBXProject "Focus Totem" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = CC2B63B22D89DAE200040DAC;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = CC2B63BC2D89DAE200040DAC /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CC2B63BA2D89DAE200040DAC /* Focus Totem */,
+				CC2B63CC2D89DAE400040DAC /* Focus TotemTests */,
+				CC2B63D62D89DAE400040DAC /* Focus TotemUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CC2B63B92D89DAE200040DAC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC2B63CB2D89DAE400040DAC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC2B63D52D89DAE400040DAC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CC2B63B72D89DAE200040DAC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC2B63C92D89DAE400040DAC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC2B63D32D89DAE400040DAC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CC2B63CF2D89DAE400040DAC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CC2B63BA2D89DAE200040DAC /* Focus Totem */;
+			targetProxy = CC2B63CE2D89DAE400040DAC /* PBXContainerItemProxy */;
+		};
+		CC2B63D92D89DAE400040DAC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CC2B63BA2D89DAE200040DAC /* Focus Totem */;
+			targetProxy = CC2B63D82D89DAE400040DAC /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		CC2B63DF2D89DAE400040DAC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		CC2B63E02D89DAE400040DAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		CC2B63E22D89DAE400040DAC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Focus Totem/Preview Content\"";
+				DEVELOPMENT_TEAM = QYQBRAV3P8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.buildusefulstuff.Focus-Totem";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CC2B63E32D89DAE400040DAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Focus Totem/Preview Content\"";
+				DEVELOPMENT_TEAM = QYQBRAV3P8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.buildusefulstuff.Focus-Totem";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		CC2B63E52D89DAE400040DAC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QYQBRAV3P8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.buildusefulstuff.Focus-TotemTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Focus Totem.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Focus Totem";
+			};
+			name = Debug;
+		};
+		CC2B63E62D89DAE400040DAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QYQBRAV3P8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.buildusefulstuff.Focus-TotemTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Focus Totem.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Focus Totem";
+			};
+			name = Release;
+		};
+		CC2B63E82D89DAE400040DAC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QYQBRAV3P8;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.buildusefulstuff.Focus-TotemUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Focus Totem";
+			};
+			name = Debug;
+		};
+		CC2B63E92D89DAE400040DAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QYQBRAV3P8;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.buildusefulstuff.Focus-TotemUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Focus Totem";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		CC2B63B62D89DAE200040DAC /* Build configuration list for PBXProject "Focus Totem" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC2B63DF2D89DAE400040DAC /* Debug */,
+				CC2B63E02D89DAE400040DAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CC2B63E12D89DAE400040DAC /* Build configuration list for PBXNativeTarget "Focus Totem" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC2B63E22D89DAE400040DAC /* Debug */,
+				CC2B63E32D89DAE400040DAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CC2B63E42D89DAE400040DAC /* Build configuration list for PBXNativeTarget "Focus TotemTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC2B63E52D89DAE400040DAC /* Debug */,
+				CC2B63E62D89DAE400040DAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CC2B63E72D89DAE400040DAC /* Build configuration list for PBXNativeTarget "Focus TotemUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC2B63E82D89DAE400040DAC /* Debug */,
+				CC2B63E92D89DAE400040DAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = CC2B63B32D89DAE200040DAC /* Project object */;
+}
