@@ -12,6 +12,7 @@ import SafariServices
 import Vision
 
 struct OnboardingView: View {
+    @Environment(\.modelContext) private var modelContext
     @Binding var hasCompletedOnboarding: Bool
     @StateObject private var permissionsManager = PermissionsManager.shared
     @State private var currentPage = 1 ////// ////// tb changed ////// //////
@@ -53,6 +54,7 @@ struct OnboardingView: View {
                         totemCaptured: $totemCaptured,
                         isLoading: $isLoading
                     )
+                    .modelContext(modelContext)
                     .opacity(currentPage == 2 ? 1 : 0)
                     .offset(x: currentPage == 2 ? 0 : (currentPage < 2 ? screenWidth : -screenWidth))
                 }

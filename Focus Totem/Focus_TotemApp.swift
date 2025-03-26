@@ -25,6 +25,7 @@ struct Focus_TotemApp: App {
                             .modelContainer(container)
                     } else {
                         OnboardingView(hasCompletedOnboarding: $hasCompletedOnboarding)
+                            .modelContainer(container)
                     }
                 }
                 .task {
@@ -51,7 +52,8 @@ struct Focus_TotemApp: App {
     private func setupModelContainer() async {
         let schema = Schema([
             ProfileModel.self,
-            SessionsStatsModel.self
+            SessionsStatsModel.self,
+            TotemModel.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         

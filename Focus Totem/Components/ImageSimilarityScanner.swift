@@ -13,6 +13,7 @@ struct ImageSimilarityScanner: View {
     let isScanning: Bool
     @Binding var similarityScore: Double
     let referenceFeaturePrint: VNFeaturePrintObservation?
+    let referenceFeaturePrints: [VNFeaturePrintObservation]
     
     // Default threshold for deciding what is a valid match
     var threshold: Double
@@ -31,6 +32,25 @@ struct ImageSimilarityScanner: View {
         self.isScanning = isScanning
         self._similarityScore = similarityScore
         self.referenceFeaturePrint = referenceFeaturePrint
+        self.referenceFeaturePrints = referenceFeaturePrint != nil ? [referenceFeaturePrint!] : []
+        self.threshold = threshold
+        self.onInvalidMatch = onInvalidMatch
+        self.onValidMatch = onValidMatch
+    }
+    
+    // Initialize with multiple reference feature prints
+    init(
+        isScanning: Bool,
+        similarityScore: Binding<Double>,
+        referenceFeaturePrints: [VNFeaturePrintObservation],
+        threshold: Double = 0.7,
+        onInvalidMatch: (() -> Void)? = nil,
+        onValidMatch: ((Double) -> Void)? = nil
+    ) {
+        self.isScanning = isScanning
+        self._similarityScore = similarityScore
+        self.referenceFeaturePrint = referenceFeaturePrints.first
+        self.referenceFeaturePrints = referenceFeaturePrints
         self.threshold = threshold
         self.onInvalidMatch = onInvalidMatch
         self.onValidMatch = onValidMatch
@@ -40,7 +60,7 @@ struct ImageSimilarityScanner: View {
         VStack {
             CameraView(
                 isScanning: isScanning,
-                referenceFeaturePrint: referenceFeaturePrint,
+                referenceFeaturePrints: referenceFeaturePrints,
                 threshold: threshold,
                 onImageCaptured: { similarity in
                     similarityScore = similarity
@@ -59,7 +79,7 @@ struct ImageSimilarityScanner: View {
 
 struct CameraView: UIViewControllerRepresentable {
     let isScanning: Bool
-    let referenceFeaturePrint: VNFeaturePrintObservation?
+    let referenceFeaturePrints: [VNFeaturePrintObservation]
     let threshold: Double
     var onImageCaptured: (Double) -> Void
     
@@ -68,7 +88,7 @@ struct CameraView: UIViewControllerRepresentable {
     
     func makeUIViewController(context: Context) -> CameraViewController {
         let vc = CameraViewController(
-            referenceFeaturePrint: referenceFeaturePrint,
+            referenceFeaturePrints: referenceFeaturePrints,
             captureFrequency: captureFrequency,
             threshold: threshold,
             onImageCaptured: onImageCaptured
@@ -89,14 +109,14 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var videoDataOutput: AVCaptureVideoDataOutput?
-    private var referenceFeaturePrint: VNFeaturePrintObservation?
+    private var referenceFeaturePrints: [VNFeaturePrintObservation]
     private var lastCaptureTime: TimeInterval = 0
     private var captureFrequency: Double
     private var threshold: Double
     private var onImageCaptured: (Double) -> Void
     
-    init(referenceFeaturePrint: VNFeaturePrintObservation?, captureFrequency: Double, threshold: Double, onImageCaptured: @escaping (Double) -> Void) {
-        self.referenceFeaturePrint = referenceFeaturePrint
+    init(referenceFeaturePrints: [VNFeaturePrintObservation], captureFrequency: Double, threshold: Double, onImageCaptured: @escaping (Double) -> Void) {
+        self.referenceFeaturePrints = referenceFeaturePrints
         self.captureFrequency = captureFrequency
         self.threshold = threshold
         self.onImageCaptured = onImageCaptured
@@ -168,19 +188,19 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
         guard currentTime - lastCaptureTime >= captureFrequency else { return }
         lastCaptureTime = currentTime
         
-        guard let referenceFeaturePrint = self.referenceFeaturePrint else { return }
+        guard !referenceFeaturePrints.isEmpty else { return }
         
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         
         // Process the image buffer to compute the similarity
-        computeImageSimilarity(pixelBuffer: pixelBuffer, referenceFeaturePrint: referenceFeaturePrint) { [weak self] similarity in
+        computeImageSimilarity(pixelBuffer: pixelBuffer, referenceFeaturePrints: referenceFeaturePrints) { [weak self] similarity in
             DispatchQueue.main.async {
                 self?.onImageCaptured(similarity)
             }
         }
     }
     
-    private func computeImageSimilarity(pixelBuffer: CVPixelBuffer, referenceFeaturePrint: VNFeaturePrintObservation, completion: @escaping (Double) -> Void) {
+    private func computeImageSimilarity(pixelBuffer: CVPixelBuffer, referenceFeaturePrints: [VNFeaturePrintObservation], completion: @escaping (Double) -> Void) {
         // Create a new request to compute the feature print of the current frame
         let request = VNGenerateImageFeaturePrintRequest()
         
@@ -197,13 +217,11 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
                 return
             }
             
-            // Compare with the reference feature print
-            var similarity: Float = 0.0
-            try featurePrintObservation.computeDistance(&similarity, to: referenceFeaturePrint)
-            
-            // Convert similarity measure (distance) to a score (1.0 - distance)
-            // The lower the distance, the more similar the images are
-            let similarityScore = Double(1.0 - similarity)
+            // Calculate the maximum similarity across all reference feature prints
+            let similarityScore = ImageSimilarityHelper.computeMaxSimilarity(
+                currentFeaturePrint: featurePrintObservation,
+                againstStoredPrints: referenceFeaturePrints
+            )
             
             // Print the similarity score to the console for debugging
             print("🔍 Totem similarity score: \(String(format: "%.4f", similarityScore)) (threshold: \(threshold))")
@@ -248,34 +266,27 @@ class ImageSimilarityHelper {
         }
     }
     
-    // Save feature print to UserDefaults
-    static func saveFeaturePrintToUserDefaults(_ featurePrint: VNFeaturePrintObservation, forKey key: String = "totemFeaturePrint") {
-        do {
-            // Serialize the feature print to Data
-            let data = try NSKeyedArchiver.archivedData(withRootObject: featurePrint, requiringSecureCoding: true)
-            
-            // Save the data to UserDefaults
-            UserDefaults.standard.set(data, forKey: key)
-        } catch {
-            print("Error saving feature print: \(error)")
-        }
-    }
-    
-    // Load feature print from UserDefaults
-    static func loadFeaturePrintFromUserDefaults(forKey key: String = "totemFeaturePrint") -> VNFeaturePrintObservation? {
-        guard let data = UserDefaults.standard.data(forKey: key) else {
-            return nil
-        }
+    // Compute maximum similarity against all stored feature prints
+    static func computeMaxSimilarity(currentFeaturePrint: VNFeaturePrintObservation, againstStoredPrints: [VNFeaturePrintObservation]) -> Double {
+        var maxSimilarity = 0.0
         
-        do {
-            // Deserialize the data back to a feature print
-            if let featurePrint = try NSKeyedUnarchiver.unarchivedObject(ofClass: VNFeaturePrintObservation.self, from: data) {
-                return featurePrint
+        for storedPrint in againstStoredPrints {
+            do {
+                var distance: Float = 0.0
+                try currentFeaturePrint.computeDistance(&distance, to: storedPrint)
+                
+                // Convert distance to similarity score (1.0 - distance)
+                let similarity = Double(1.0 - distance)
+                
+                // Update max similarity if this one is higher
+                if similarity > maxSimilarity {
+                    maxSimilarity = similarity
+                }
+            } catch {
+                print("Error computing similarity: \(error)")
             }
-        } catch {
-            print("Error loading feature print: \(error)")
         }
         
-        return nil
+        return maxSimilarity
     }
 }
