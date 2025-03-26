@@ -1,0 +1,568 @@
+//
+//  ContentView.swift
+//  Deliberate
+//
+//  Created by Daniele Spaccapeli on 11/03/25.
+//
+
+import SwiftUI
+import AVFoundation
+import VisionKit
+import SwiftData
+import FamilyControls
+
+struct ContentView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var stats: [SessionsStatsModel]
+
+    // Constants
+    private static let defaultProfileName = "Default Profile"
+    // QR code URL host that triggers blocking/unblocking
+    private let triggerURLHost = "deliberate.app"
+    // Create a temporary ModelContainer for initialization
+    private static let tempContainer = try! ModelContainer(for: ProfileModel.self, SessionsStatsModel.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    // Debounce time in seconds to prevent rapid toggling of blocking state
+    private static let blockingDebounceTime: TimeInterval = 1.5
+    
+    @StateObject private var permissionsManager = PermissionsManager.shared
+    @StateObject private var screenTimeManager = ScreenTimeManager(
+        modelContext: tempContainer.mainContext,
+        defaultProfileName: defaultProfileName
+    )
+    
+    @State private var isTimerInitialized = false
+    @State private var blockingStartTime: Date?
+    @State private var lastScannedQRValue: String = "No QR code scanned yet"
+    @State private var timer: Timer?
+    
+    @State private var currentElapsedTime: TimeInterval = 0
+    @State private var lastQRScanTime: Date?
+
+    @State private var showingAuthorizationError = false
+    @State private var showingSetupError = false
+
+    @State private var showingSettingsView = false
+    @State private var showingProfileSelection = false
+    @State private var showingFamilyPicker = false
+    @State private var showingProfilesView = false
+
+    // Computed property to determine scanning state
+    private var isScanning: Bool {
+        // Only scan if:
+        // 1. Camera permission is authorized
+        // 2. Screen Time permission is approved
+        // 3. No modal sheets are being presented
+        return permissionsManager.cameraPermissionStatus == .authorized &&
+               permissionsManager.screenTimePermissionStatus == .approved &&
+               !showingFamilyPicker &&
+               !showingProfilesView &&
+               !showingAuthorizationError &&
+               screenTimeManager.activeProfile?.hasTokens ?? false
+    }
+    
+    // Computed properties for Default Profile
+    private var defaultProfile: ProfileModel? {
+        screenTimeManager.profiles.first { $0.name == Self.defaultProfileName }
+    }
+    
+    // Computed property to access the single stats object
+    private var statsObject: SessionsStatsModel? {
+        stats.first
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Spacer()
+                
+                // App header
+                AppHeader()
+                .padding(.bottom, 60)
+                
+                if !screenTimeManager.isSetupComplete {
+                    // Show loading indicator while setup is in progress
+                    ProgressView("Setting up profiles...")
+                        .progressViewStyle(CircularProgressViewStyle())
+                } else if let setupError = screenTimeManager.setupError {
+                    // Show error view if setup failed
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(.orange)
+                        
+                        Text("Setup Error")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        Text("There was a problem setting up your profiles: \(setupError.localizedDescription)")
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                        
+                        Button("Retry") {
+                            Task {
+                                try? await screenTimeManager.setup()
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .padding(.top)
+                    }
+                    .padding()
+                } else {
+                    // QR Scanner View
+                    QRScanner(
+                        isScanning: isScanning,
+                        lastScannedValue: $lastScannedQRValue,
+                        validHost: triggerURLHost,
+                        onInvalidQR: {
+                            // Handle invalid QR code
+                            lastScannedQRValue = "Error: Invalid QR code"
+                        },
+                        onValidQR: { code in
+                            // Handle valid QR code
+                            handleScannedQRCode(code)
+                        }
+                    )
+                    .frame(width: 200, height: 200)
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .inset(by: -4)
+                            .stroke(screenTimeManager.isBlocking ? .red : .blue,
+                                lineWidth: screenTimeManager.isBlocking ? 6 : 3)
+                    )
+                    .overlay(
+                        ZStack {
+                            if screenTimeManager.hasSelection {
+                                Image(systemName: "qrcode.viewfinder")
+                                    .font(.system(size: 120))
+                                    .foregroundColor(screenTimeManager.isBlocking ?
+                                        .red.opacity(0.2) : .blue.opacity(0.2))
+                            } else if permissionsManager.screenTimePermissionStatus == .approved {
+                                RoundedRectangle(cornerRadius: 16)
+                                .fill(.ultraThinMaterial)
+                                Image(systemName: "apps.iphone")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.white)
+                                    .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
+                            } else {
+                                RoundedRectangle(cornerRadius: 16)
+                                .fill(.ultraThinMaterial)
+                                Image(systemName: "hourglass")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.white)
+                                    .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
+                            }
+                        }
+                    )
+                    
+                    // Scanning status
+                    HStack(spacing: 4) {
+                        Text(lastScannedQRValue.components(separatedBy: " | ").first ?? lastScannedQRValue)
+                            .font(.caption)
+                            .foregroundColor(
+                                lastScannedQRValue.hasPrefix("Error") ? .red :
+                                lastScannedQRValue.hasPrefix("Started") ?
+                                    .green : .secondary
+                            )
+                        
+                        if lastScannedQRValue.contains("Params: [") {
+                            Text(lastScannedQRValue.components(separatedBy: "Params: [").last?.dropLast() ?? "")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(.secondary.opacity(0.1))
+                                .cornerRadius(4)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 16)
+                    .frame(height: 10)
+                    
+                    // App Selection Buttons
+                    VStack(spacing: 10) {
+                        if permissionsManager.screenTimePermissionStatus == .approved {
+                            // Show app selection buttons when permission is granted
+                            Button(action: {
+                                // Set selection to the Default Profile if available
+                                if let profile = defaultProfile {
+                                    screenTimeManager.selection = profile.toFamilyActivitySelection()
+                                } else {
+                                    // Reset selection if no Default Profile exists
+                                    screenTimeManager.selection = FamilyActivitySelection()
+                                }
+                                showingFamilyPicker = true
+                            }) {
+                                Label(
+                                    "Quick Select Apps", 
+                                    systemImage: defaultProfile?.hasTokens ?? false
+                                        ? (screenTimeManager.activeProfile == defaultProfile ? "checkmark.circle" : "circle")
+                                        : "plus.circle"
+                                )
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(screenTimeManager.isBlocking ? Color.secondary : .blue)
+                                .cornerRadius(10)
+                                .opacity(screenTimeManager.isBlocking ? 0.6 : 1.0)
+                                .symbolEffect(.bounce, options: .speed(1.5), value: defaultProfile?.hasTokens ?? false)
+                                .symbolEffect(.bounce, options: .speed(1.5), value: screenTimeManager.activeProfile == defaultProfile)
+                                .contentTransition(.symbolEffect(.replace.downUp))
+                            }
+                            .disabled(screenTimeManager.isBlocking)
+                            
+                            Button(action: {
+                                showingProfilesView = true
+                            }) {
+                                Label("Manage Profiles", systemImage: "rectangle.stack")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(screenTimeManager.isBlocking ? Color.secondary : .blue)
+                                    .cornerRadius(10)
+                                    .opacity(screenTimeManager.isBlocking ? 0.6 : 1.0)
+                            }
+                            .disabled(screenTimeManager.isBlocking)
+                        } else {
+                            // Show only permission request button when permission is not granted
+                            Button(action: {
+                                Task {
+                                    let granted = await permissionsManager.requestScreenTimePermission()
+                                    if !granted {
+                                        showingAuthorizationError = true
+                                    }
+                                }
+                            }) {
+                                Label("Allow Blocking Apps", systemImage: "hand.raised")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(.blue)
+                                    .cornerRadius(10)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 30)
+                    // Family Activity Picker for Default Profile
+                    .familyActivityPicker(isPresented: $showingFamilyPicker, 
+                                        selection: $screenTimeManager.selection)
+                    .onChange(of: showingFamilyPicker) { _, isPresented in
+                        if !isPresented {
+                            // Picker was dismissed, process the selection
+                            Task {
+                                await screenTimeManager.createOrUpdateQuickSelectionProfile(with: screenTimeManager.selection)
+                            }
+                        }
+                    }
+                    .sheet(isPresented: $showingProfilesView) {
+                        ProfileSelectionView(screenTimeManager: screenTimeManager)
+                    }
+                    .alert("Permission Required for App Blocking", isPresented: $showingAuthorizationError) {
+                        Button("Allow", role: .none) {
+                            Task {
+                                await permissionsManager.requestScreenTimePermission()
+                            }
+                        }
+                        Button("Not now", role: .cancel) { }
+                    } message: {
+                        Text("Deliberate needs Screen Time access to block distracting apps. This is a core feature that won't work without this permission.")
+                    }
+                    // Selection status
+                    VStack {
+                        if permissionsManager.screenTimePermissionStatus == .approved {
+                            if !screenTimeManager.isBlocking {
+                                if screenTimeManager.hasSelection {
+                                    HStack(spacing: 6) {
+                                        Spacer()
+                                        Image(systemName: "checkmark.circle")
+                                            .foregroundColor(.blue)
+                                        if let activeProfile = screenTimeManager.activeProfile {
+                                            Text("Profile: \(activeProfile.name)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        } else {
+                                            Text("Apps selected")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                    }
+                                } else {
+                                    HStack(spacing: 6) {
+                                        Spacer()
+                                        Image(systemName: "hand.point.up")
+                                            .foregroundColor(.blue)
+                                        Text("Select which apps to block")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                    }
+                                }
+                            } else {
+                                HStack(spacing: 6) {
+                                    Spacer()
+                                    Image(systemName: "qrcode.viewfinder")
+                                        .foregroundColor(.red)
+                                    Text("Scan the sticker to unlock the apps")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                }
+                            }
+                        } else {
+                            HStack(spacing: 6) {
+                                Spacer()
+                                Image(systemName: "exclamationmark.circle")
+                                    .foregroundColor(.blue)
+                                Text("Give Deliberate permissions to block apps")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                            }
+                        }
+                    }
+                    .frame(height: 20) // Fixed height to prevent layout shifts
+                    .padding(.top, 2)
+                }
+                
+                Spacer()
+                
+                // Time Counter
+                VStack {
+                    Text(screenTimeManager.isBlocking ? "Current Session Time" : "Time Blocked This Week")
+                        .font(.caption)
+                    if isTimerInitialized {
+                        Text(timeString(from: screenTimeManager.isBlocking ? currentElapsedTime : statsObject?.calculateTimeThisWeek() ?? .zero))
+                            .font(.title2)
+                            .bold()
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(screenTimeManager.isBlocking ? .red.opacity(0.2) : .blue.opacity(0.2))
+                            .cornerRadius(8)
+                            .frame(minWidth: 120) // Ensure minimum width
+                    } else {
+                        // Use a ZStack to ensure consistent sizing with the time display
+                        ZStack {
+                            // Invisible text with the same font/size as the time display to maintain consistent dimensions
+                            // Using a placeholder that includes days format to ensure enough width
+                            Text("1d 00:00:00")
+                                .font(.title2)
+                                .bold()
+                                .opacity(0)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                            
+                            ProgressView()
+                                .controlSize(.regular)
+                        }
+                        .background(.blue.opacity(0.1))
+                        .cornerRadius(8)
+                        .frame(minWidth: 120) // Ensure minimum width
+                    }
+                }
+                .padding(.bottom, 20)
+            }
+            .navigationBarItems(trailing: 
+                Button(action: {
+                    showingSettingsView = true
+                }) {
+                    Image(systemName: "gearshape")
+                        .font(.title2)
+                }
+            )
+            .sheet(isPresented: $showingSettingsView) {
+                SettingsView(
+                    screenTimeManager: screenTimeManager,
+                    onEmergencyUnblock: stopBlocking
+                )
+            }
+        }
+        .onChange(of: showingFamilyPicker) { _, _ in
+            if !showingFamilyPicker {
+                // Picker was dismissed, process the selection
+                if let defaultProfile = defaultProfile {
+                    Task {
+                        await screenTimeManager.activateProfile(defaultProfile)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            // Start the timer for updating elapsed time
+            startTimer()
+            
+            // Update the model context with the real one from the environment
+            screenTimeManager.updateModelContext(modelContext)
+            
+            // Check if apps are currently blocked
+            screenTimeManager.checkCurrentBlockingState()
+            
+            // If blocking is active but no active session exists, create one
+            if screenTimeManager.isBlocking {
+                if let stats = statsObject {
+                    // If there's already an active session, don't create a new one
+                    if !stats.hasActiveSession {
+                        _ = stats.startNewSession()
+                        try? modelContext.save()
+                    }
+                } else {
+                    // Create a new stats object with a new session
+                    let newStats = SessionsStatsModel()
+                    _ = newStats.startNewSession()
+                    modelContext.insert(newStats)
+                    try? modelContext.save()
+                }
+                
+                print("Restored blocking state from previous session")
+            } else {
+                // If not blocking but there's an active session, end it
+                if let stats = statsObject, stats.hasActiveSession {
+                    stats.endCurrentSession()
+                    try? modelContext.save()
+                }
+            }
+            
+            // Initialize the timer if stats object exists
+            if statsObject == nil {
+                // Create a new stats object if one doesn't exist
+                let newStats = SessionsStatsModel()
+                modelContext.insert(newStats)
+                try? modelContext.save()
+            }
+
+            isTimerInitialized = true
+            
+            // Check permissions
+            Task {
+                // Check camera permission status
+                await permissionsManager.checkCameraPermission()
+                
+                // Check screen time permission status
+                await permissionsManager.checkScreenTimePermission()
+            }
+        }
+        .alert("Setup Error", isPresented: $showingSetupError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            if let error = screenTimeManager.setupError {
+                Text("There was a problem setting up your profiles: \(error.localizedDescription)")
+            } else {
+                Text("An unknown error occurred during setup.")
+            }
+        }
+    }
+    
+    private func handleScannedQRCode(_ code: String) {
+        // Try to create URL from scanned code
+        guard let url = URL(string: code),
+              url.host == triggerURLHost else {
+            lastScannedQRValue = "Invalid URL: Must be a deliberate.app URL"
+            return
+        }
+        
+        // Check if we're within the debounce period
+        if let lastScan = lastQRScanTime, 
+           Date().timeIntervalSince(lastScan) < Self.blockingDebounceTime {
+            print("Ignoring QR scan - within debounce period")
+            return
+        }
+        
+        // Record this scan time
+        lastQRScanTime = Date()
+        
+        // Extract parameters from URL
+        var params: [String: String] = [:]
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let queryItems = components.queryItems {
+            for item in queryItems {
+                params[item.name] = item.value ?? ""
+            }
+        }
+        
+        // Format parameters for display
+        let paramsString = params.isEmpty ? "[]" : "[\(params.map { "\($0.key): \($0.value)" }.joined(separator: ", "))]"
+        lastScannedQRValue = "Scanned URL | Params: \(paramsString)"
+        
+        // Toggle blocking state
+        if screenTimeManager.isBlocking {
+            stopBlocking()
+        } else {
+            startBlocking()
+        }
+    }
+    
+    private func startBlocking() {
+        // Start blocking
+        screenTimeManager.activateBlockingForCurrentProfile()
+        
+        // Create a new blocking session
+        if let stats = statsObject {
+            // If there's already an active session, don't create a new one
+            if !stats.hasActiveSession {
+                _ = stats.startNewSession()
+                try? modelContext.save()
+            }
+        } else {
+            // Create a new stats object with a new session
+            let newStats = SessionsStatsModel()
+            _ = newStats.startNewSession()
+            modelContext.insert(newStats)
+            try? modelContext.save()
+        }
+        
+        // Start timer to update UI
+        startTimer()
+    }
+    
+    private func stopBlocking() {
+        // Stop blocking
+        screenTimeManager.deactivateBlocking()
+        
+        // End current session
+        if let stats = statsObject, stats.hasActiveSession {
+            stats.endCurrentSession()
+            try? modelContext.save()
+        }
+        
+        // Stop and invalidate timer
+        timer?.invalidate()
+        timer = nil
+    }
+    
+    private func timeString(from timeInterval: TimeInterval) -> String {
+        let days = Int(timeInterval) / 86400
+        let hours = Int(timeInterval) / 3600 % 24
+        let minutes = Int(timeInterval) / 60 % 60
+        let seconds = Int(timeInterval) % 60
+        
+        if days > 0 {
+            return String(format: "%dd %02d:%02d:%02d", days, hours, minutes, seconds)
+        } else {
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+    }
+    
+    // Update timer function
+    private func startTimer() {
+        // Refresh UI immediately instead of waiting for end of first time interval
+        if let stats = self.statsObject, stats.hasActiveSession {
+            self.currentElapsedTime = stats.currentSession?.duration ?? 0
+        }
+
+        // Stop existing timer if any
+        timer?.invalidate()
+        
+        // Start new timer
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            if let stats = self.statsObject, stats.hasActiveSession {
+                self.currentElapsedTime = stats.currentSession?.duration ?? 0
+            }
+        }
+    }
+}
+
+#Preview {
+    ContentView()
+        .modelContainer(for: [ProfileModel.self, SessionsStatsModel.self], inMemory: true)
+}

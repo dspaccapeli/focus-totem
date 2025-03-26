@@ -7,26 +7,66 @@
 
 import SwiftUI
 import SwiftData
+import AVFoundation
+import FamilyControls
 
 @main
 struct Focus_TotemApp: App {
-    var sharedModelContainer: ModelContainer = {
+    @State private var sharedModelContainer: ModelContainer?
+    @State private var hasCompletedOnboarding = false
+    @StateObject private var permissionsManager = PermissionsManager.shared
+    
+    var body: some Scene {
+        WindowGroup {
+            if let container = sharedModelContainer {
+                Group {
+                    if hasCompletedOnboarding {
+                        ContentView()
+                            .modelContainer(container)
+                    } else {
+                        OnboardingView(hasCompletedOnboarding: $hasCompletedOnboarding)
+                    }
+                }
+                .task {
+                    // Check if onboarding has been fully completed
+                    hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "onboardingCompleted")
+                    
+                    // Check permissions status at app launch
+                    Task {
+                        await permissionsManager.checkCameraPermission()
+                        await permissionsManager.checkScreenTimePermission()
+                    }
+                }
+            } else {
+                ProgressView("Loading...")
+                    .onAppear {
+                        Task {
+                            await setupModelContainer()
+                        }
+                    }
+            }
+        }
+    }
+    
+    private func setupModelContainer() async {
         let schema = Schema([
-            Item.self,
+            ProfileModel.self,
+            SessionsStatsModel.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
+        
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            // Create the container on a background thread
+            let container = try await Task.detached(priority: .userInitiated) {
+                try ModelContainer(for: schema, configurations: [modelConfiguration])
+            }.value
+            
+            // Update the state on the main thread
+            await MainActor.run {
+                self.sharedModelContainer = container
+            }
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
-    }()
-
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-        .modelContainer(sharedModelContainer)
     }
 }
