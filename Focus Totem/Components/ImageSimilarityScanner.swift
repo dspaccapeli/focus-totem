@@ -19,13 +19,15 @@ struct ImageSimilarityScanner: View {
     var threshold: Double
     var onInvalidMatch: (() -> Void)?
     var onValidMatch: ((Double) -> Void)?
-    
+    var captureFrequency: Double // Capture frequency in seconds
+        
     // Initialize with default configuration
     init(
         isScanning: Bool,
         similarityScore: Binding<Double>,
         referenceFeaturePrint: VNFeaturePrintObservation?,
         threshold: Double = 0.7,
+        captureFrequency: Double = 0.5,
         onInvalidMatch: (() -> Void)? = nil,
         onValidMatch: ((Double) -> Void)? = nil
     ) {
@@ -34,6 +36,7 @@ struct ImageSimilarityScanner: View {
         self.referenceFeaturePrint = referenceFeaturePrint
         self.referenceFeaturePrints = referenceFeaturePrint != nil ? [referenceFeaturePrint!] : []
         self.threshold = threshold
+        self.captureFrequency = captureFrequency
         self.onInvalidMatch = onInvalidMatch
         self.onValidMatch = onValidMatch
     }
@@ -44,6 +47,7 @@ struct ImageSimilarityScanner: View {
         similarityScore: Binding<Double>,
         referenceFeaturePrints: [VNFeaturePrintObservation],
         threshold: Double = 0.7,
+        captureFrequency: Double = 0.5,
         onInvalidMatch: (() -> Void)? = nil,
         onValidMatch: ((Double) -> Void)? = nil
     ) {
@@ -52,6 +56,7 @@ struct ImageSimilarityScanner: View {
         self.referenceFeaturePrint = referenceFeaturePrints.first
         self.referenceFeaturePrints = referenceFeaturePrints
         self.threshold = threshold
+        self.captureFrequency = captureFrequency
         self.onInvalidMatch = onInvalidMatch
         self.onValidMatch = onValidMatch
     }
@@ -70,9 +75,10 @@ struct ImageSimilarityScanner: View {
                     } else {
                         onInvalidMatch?()
                     }
-                }
+                },
+                captureFrequency: captureFrequency
             )
-            Text("Similarity Score: \(String(format: "%.4f", similarityScore))")
+            // Text("Similarity Score: \(String(format: "%.4f", similarityScore))")
         }
     }
 }
