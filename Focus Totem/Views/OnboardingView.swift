@@ -15,7 +15,7 @@ struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @Binding var hasCompletedOnboarding: Bool
     @StateObject private var permissionsManager = PermissionsManager.shared
-    @State private var currentPage = 1 ////// ////// tb changed ////// //////
+    @State private var currentPage = 0
     @State private var cameraPermissionGranted = false
     @State private var totemCaptured = false
     @State private var isScanning = false

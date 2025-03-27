@@ -20,7 +20,7 @@ struct TotemScanningPageView: View {
     
     // State variables for storing the totem feature prints
     @State private var capturedFeaturePrints: [VNFeaturePrintObservation] = []
-    @State private var requiredCaptureCount = 3
+    @State private var requiredCaptureCount = 5 // Play with this
     @State private var showInvalidImageMessage = false
     @State private var invalidImageMessageTimer: Timer?
     @State private var isCaptureMode = true
@@ -29,19 +29,14 @@ struct TotemScanningPageView: View {
     @State private var showingNameInput = false
     @State private var capturedImages: [UIImage] = []
     
-    // Grid layout for captured images
-    private let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
+    var similarityThreshold: Double = 0.3 // Play with this
     
     var body: some View {
         VStack(spacing: 15) {
             Spacer()
             
             if totemCaptured, let totem = savedTotem {
-                // Success view
+                // START Success view
                 VStack(spacing: 20) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 80))
@@ -124,237 +119,278 @@ struct TotemScanningPageView: View {
                 .padding(.vertical, 20)
                 
                 Spacer()
+                // END Success View
             } else {
-                Text("Let's Capture Your Totem")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                // START Header View
+                VStack(spacing: 15) {
+                    Text("Let's Capture Your Totem")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
 
-                Text("Take at least \(requiredCaptureCount) pictures of your totem from different angles")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                
-                // Camera view for capturing totem image
-                ZStack {
-                    if isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .frame(width: 200, height: 200)
-                    } else if isScanning {
-                        // In capture mode, we just show the camera and save the feature print on capture
-                        if isCaptureMode {
-                            CaptureImageView(
-                                isCapturing: isScanning,
-                                onCaptureButtonTapped: captureImage
-                            )
-                            .frame(width: 200, height: 200)
-                            .cornerRadius(10)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.blue, lineWidth: 3)
-                            )
-                            .overlay(
-                                ZStack {
-                                    Image(systemName: "camera.shutter.button")
-                                        .font(.system(size: 80))
-                                        .foregroundColor(.blue.opacity(0.2))
-                                }
-                                .allowsHitTesting(false)
-                            )
-                        } else if !capturedFeaturePrints.isEmpty {
-                            // In verification mode, we use the similarity scanner to verify the capture worked
-                            ImageSimilarityScanner(
-                                isScanning: isScanning,
-                                similarityScore: $similarityScore,
-                                referenceFeaturePrints: capturedFeaturePrints,
-                                threshold: 0.5,
-                                onInvalidMatch: {
-                                    showInvalidImageMessage = true
-                                    invalidImageMessageTimer?.invalidate()
-                                    invalidImageMessageTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
-                                        showInvalidImageMessage = false
-                                    }
-                                },
-                                onValidMatch: { score in
-                                    // Show name input dialog
-                                    showingNameInput = true
-                                }
-                            )
-                            .frame(width: 200, height: 200)
-                            .cornerRadius(10)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .inset(by: showInvalidImageMessage ? -4 : 0)
-                                    .stroke(showInvalidImageMessage ? .red : .blue, 
-                                        lineWidth: showInvalidImageMessage ? 6 : 3)
-                            )
-                        }
-                    } else {
-                        // Placeholder when not scanning
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.black.opacity(0.05))
-                                .frame(width: 200, height: 200)
-                            
-                            Image(systemName: "camera.viewfinder")
-                                .font(.system(size: 80))
-                                .foregroundColor(Color.blue.opacity(0.3))
-                        }
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.blue, lineWidth: 3)
-                        )
-                    }
+                    Text("Take at least \(requiredCaptureCount) pictures of your totem from different angles")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
                 }
-                .padding(.top, 20)
+                .padding(.bottom, 40)
+                // END Header View
                 
-                if !isCaptureMode {
-                    if showInvalidImageMessage {
-                        Text("Please try to frame your totem object better")
-                            .font(.body)
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
-                    } else {
-                        VStack(spacing: 5) {
-                            Text("Show your totem in the frame to verify")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Text("Similarity: \(String(format: "%.2f", similarityScore))")
-                                .font(.caption)
-                                .foregroundColor(similarityScore > 0.3 ? (similarityScore > 0.5 ? .green : .orange) : .gray)
-                        }
-                    }
-                    
-                    Button(action: {
-                        // Switch back to capture mode
-                        isCaptureMode = true
-                        
-                        // Ensure we're still scanning when transitioning to capture mode
-                        isScanning = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            isScanning = true
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: "arrow.counterclockwise")
-                            Text("Recapture")
-                        }
-                        .font(.caption)
-                        .foregroundColor(.blue)
-                    }
-                    .padding(.top, 10)
-                } else {
-                    // Show progress of captures
-                    HStack(spacing: 8) {
-                        // Show first 3 dots
-                        ForEach(0..<3, id: \.self) { index in
-                            Circle()
-                                .fill(index < capturedFeaturePrints.count ? Color.blue : Color.gray.opacity(0.3))
-                                .frame(width: 12, height: 12)
-                        }
-                        
-                        // Show count of additional photos
-                        if capturedFeaturePrints.count > 3 {
-                            Text("+\(capturedFeaturePrints.count - 3)")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                                .padding(.leading, 4)
-                        }
-                    }
-                    .padding(.top, 5)
-                    
-                    Text(capturedFeaturePrints.isEmpty ? 
-                         "Center your totem object in the frame and tap" : 
-                         capturedFeaturePrints.count < requiredCaptureCount ?
-                         "Take picture \(capturedFeaturePrints.count + 1) from a different angle" :
-                         "Required angles captured! You can verify now or take more pictures")
+                // START Camera view
+                VStack(spacing: 15) {
+                    Text(capturedFeaturePrints.isEmpty ?
+                         "Center your totem in the frame and tap the camera" :
+                         isCaptureMode ?
+                         "Take 'Picture \(capturedFeaturePrints.count + 1)' from a different angle" :
+                         ""
+                        )
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                     
-                    if capturedFeaturePrints.count < requiredCaptureCount {
-                        /*
-                        Button(action: captureImage) {
-                            Text(capturedFeaturePrints.isEmpty ? "Capture Totem" : "Capture Angle \(capturedFeaturePrints.count + 1)")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
-                                .background(Color.blue)
-                                .cornerRadius(10)
-                        }
-                        .padding(.top, 10)
-                        .disabled(!isScanning) // Disable the button if not scanning
-                        */
-                    } else {
-                        VStack(spacing: 10) {
-                            Text("Take more pictures or verify your totem")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            VStack(spacing: 15) {
-                                Button(action: {
-                                    // Switch to verification mode
-                                    isCaptureMode = false
-                                    
-                                    // Ensure we're still scanning when transitioning to verification mode
-                                // This is necessary because the camera needs to restart in verification mode
-                                    isScanning = false
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                        isScanning = true
-                                    }
-                                }) {
-                                    Text("Verify Totem")
-                                        .font(.headline)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 24)
-                                        .padding(.vertical, 12)
-                                        .background(Color.blue)
+                    // Camera view for capturing totem image
+                    HStack(alignment: .center) {
+                        Spacer()
+                        
+                        ZStack {
+                            if isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                                    .frame(width: 200, height: 200)
+                            } else if isScanning {
+                                // In capture mode, we just show the camera and save the feature print on capture
+                                if isCaptureMode {
+                                    ZStack {
+                                        CaptureImageView(
+                                            isCapturing: isScanning,
+                                            onCaptureButtonTapped: captureImage
+                                        )
+                                        .frame(width: 200, height: 200)
                                         .cornerRadius(10)
-                                }
-                                /*
-                                Button(action: captureImage) {
-                                    Text("Take More Pictures")
-                                        .font(.headline)
-                                        .foregroundColor(.blue)
-                                        .padding(.horizontal, 24)
-                                        .padding(.vertical, 12)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 10)
-                                                .stroke(Color.blue, lineWidth: 2)
+                                                .stroke(Color.blue, lineWidth: 3)
                                         )
+                                        .overlay(
+                                            ZStack {
+                                                Image(systemName: "camera.shutter.button")
+                                                    .font(.system(size: 60))
+                                                    .foregroundColor(.blue.opacity(0.2))
+                                            }
+                                            .allowsHitTesting(false)
+                                        )
+                                        
+                                        if !capturedImages.isEmpty {
+                                            ZStack {
+                                                ForEach(Array(capturedImages.enumerated()), id: \.offset) { index, image in
+                                                    Image(uiImage: image)
+                                                        .resizable()
+                                                        .scaledToFill()
+                                                        .frame(width: 70, height: 70)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: 8)
+                                                                .stroke(Color.blue, lineWidth: 2)
+                                                        )
+                                                        .shadow(radius: 3)
+                                                        .rotationEffect(.degrees(index % 2 == 0 ? 
+                                                            Double((index + 1) * 7) : 
+                                                            Double((index + 1) * -7)))
+                                                        .offset(x: 120)
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else if !capturedFeaturePrints.isEmpty {
+                                    // In verification mode, we use the similarity scanner to verify the capture worked
+                                    ImageSimilarityScanner(
+                                        isScanning: isScanning,
+                                        similarityScore: $similarityScore,
+                                        referenceFeaturePrints: capturedFeaturePrints,
+                                        threshold: similarityThreshold,
+                                        captureFrequency: 0.2,
+                                        onInvalidMatch: {
+                                            showInvalidImageMessage = true
+                                            invalidImageMessageTimer?.invalidate()
+                                            invalidImageMessageTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
+                                                showInvalidImageMessage = false
+                                            }
+                                        },
+                                        onValidMatch: { score in
+                                            // Show name input dialog
+                                            showingNameInput = true
+                                        }
+                                    )
+                                    .frame(width: 200, height: 200)
+                                    .cornerRadius(10)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .inset(by: showInvalidImageMessage ? -4 : 0)
+                                            // .stroke(showInvalidImageMessage ? .red : .blue,
+                                            //    lineWidth: showInvalidImageMessage ? 6 : 3)
+                                            .stroke(Color.blue.opacity(similarityScore <= 0 ? 0.1 : 0.1 + pow(similarityScore / similarityThreshold, 2) * 0.9),
+                                                    lineWidth: similarityScore <= 0 ? 3 : 3 + (similarityScore / similarityThreshold) * 3)
+                                    )
                                 }
-                                */
+                            } else {
+                                // Placeholder when not scanning
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.black.opacity(0.05))
+                                        .frame(width: 200, height: 200)
+                                    
+                                    Image(systemName: "camera.viewfinder")
+                                        .font(.system(size: 80))
+                                        .foregroundColor(Color.blue.opacity(0.3))
+                                }
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.blue, lineWidth: 3)
+                                )
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    if !isCaptureMode {
+                        if showInvalidImageMessage {
+                            /*
+                            Text("Totem not yet recognized")
+                                .font(.body)
+                                .foregroundColor(.blue)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                             */
+                        }
+                        
+                        Button(action: {
+                            // Switch back to capture mode
+                            isCaptureMode = true
+                            
+                            // Ensure we're still scanning when transitioning to capture mode
+                            isScanning = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                isScanning = true
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "photo.badge.plus")
+                                Text("Add More Photos")
+                            }
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        }
+                        .padding(.top, 10)
+                    } else {
+                        // Show progress of captures
+                        HStack(spacing: 8) {
+                            // Show first 3 dots
+                            ForEach(0..<3, id: \.self) { index in
+                                Circle()
+                                    .fill(index < capturedFeaturePrints.count ? Color.blue : Color.gray.opacity(0.3))
+                                    .frame(width: 12, height: 12)
                             }
                             
+                            // Show count of additional photos
+                            if capturedFeaturePrints.count > 3 {
+                                Text("+\(capturedFeaturePrints.count - 3)")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                    .padding(.leading, 4)
+                            }
+                        }
+                        .padding(.top, 5)
+                    }
+                }
+                // End Camera View
+                
+                // START Body view
+                if capturedFeaturePrints.count >= requiredCaptureCount {
+                    VStack(spacing: 10) {
+                        Text("Take more pictures or verify your totem")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        VStack(spacing: 15) {
                             Button(action: {
-                                // Reset the captured feature prints to allow retaking the photos
-                                capturedFeaturePrints = []
-                                capturedImages = []
+                                // Switch to verification mode
+                                isCaptureMode = false
+                                similarityScore = 0 // Reset similarity score for new verification attempt
                                 
-                                // Restart the camera session to ensure it's ready for the next capture
+                                // Ensure we're still scanning when transitioning to verification mode
+                                // This is necessary because the camera needs to restart in verification mode
                                 isScanning = false
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                     isScanning = true
                                 }
                             }) {
-                                HStack {
-                                    Image(systemName: "arrow.counterclockwise")
-                                    Text("Retake Photos")
-                                }
-                                .font(.caption)
-                                .foregroundColor(.blue)
+                                Text("Verify Totem")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 12)
+                                    .background(Color.blue.opacity(isCaptureMode ? 1.0 : 0.5))
+                                    .cornerRadius(10)
                             }
-                            .padding(.top, 5)
+                            .disabled(!isCaptureMode)
+                            /*
+                            Button(action: captureImage) {
+                                Text("Take More Pictures")
+                                    .font(.headline)
+                                    .foregroundColor(.blue)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.blue, lineWidth: 2)
+                                    )
+                            }
+                            */
                         }
-                        .padding(.top, 10)
+                        
+                        Button(action: {
+                            // Reset the captured feature prints to allow retaking the photos
+                            capturedFeaturePrints = []
+                            capturedImages = []
+                            isCaptureMode = true  // Ensure we're in capture mode
+                            
+                            // Restart the camera session to ensure it's ready for the next capture
+                            isScanning = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                isScanning = true
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.counterclockwise")
+                                Text("Start Over")
+                            }
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        }
+                        .padding(.top, 5)
                     }
+                    .padding(.top, 10)
+                    .frame(minHeight: 150)
+                } else {
+                    /*
+                    Button(action: captureImage) {
+                        Text(capturedFeaturePrints.isEmpty ? "Capture Totem" : "Capture Angle \(capturedFeaturePrints.count + 1)")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                    }
+                    .padding(.top, 10)
+                    .disabled(!isScanning) // Disable the button if not scanning
+                    */
+                    Spacer()
+                        .frame(height: 150)
                 }
-                
-                Spacer()
+                // END Body view
             }
         }
         .padding(.horizontal, 30)
@@ -592,5 +628,32 @@ class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegat
         
         currentCaptureCompletion?(.success(image))
         currentCaptureCompletion = nil
+    }
+}
+
+struct TotemScanningPageView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            TotemScanningPageView(isScanning: .constant(true), totemCaptured: .constant(false), isLoading: .constant(false))
+                .modelContainer(for: TotemModel.self)
+        }
+    }
+    
+    static var previewsWithCaptures: some View {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: TotemModel.self, configurations: config)
+        
+        // Create a sample totem with some captures
+        let sampleTotem = TotemModel(name: "Preview Totem", featurePrints: [], imageDataArray: [
+            UIImage(systemName: "photo")!.jpegData(compressionQuality: 0.7)!,
+            UIImage(systemName: "photo.fill")!.jpegData(compressionQuality: 0.7)!,
+            UIImage(systemName: "photo.circle")!.jpegData(compressionQuality: 0.7)!
+        ])
+        container.mainContext.insert(sampleTotem)
+        
+        return NavigationView {
+            TotemScanningPageView(isScanning: .constant(true), totemCaptured: .constant(false), isLoading: .constant(false))
+                .modelContainer(container)
+        }
     }
 }
