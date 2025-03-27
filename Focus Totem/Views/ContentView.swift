@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  Deliberate
+//  Focus Totem
 //
 //  Created by Daniele Spaccapeli on 11/03/25.
 //
@@ -10,15 +10,19 @@ import AVFoundation
 import VisionKit
 import SwiftData
 import FamilyControls
+import Vision
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var stats: [SessionsStatsModel]
+    @Query(filter: #Predicate<TotemModel> { totem in
+        totem.isActive == true
+    }) private var activeTotem: [TotemModel]
 
     // Constants
     private static let defaultProfileName = "Default Profile"
-    // QR code URL host that triggers blocking/unblocking
-    private let triggerURLHost = "deliberate.app"
+    // Similarity threshold for triggering blocking/unblocking
+    private let similarityThreshold: Double = 0.3
     // Create a temporary ModelContainer for initialization
     private static let tempContainer = try! ModelContainer(for: ProfileModel.self, SessionsStatsModel.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     // Debounce time in seconds to prevent rapid toggling of blocking state
@@ -32,11 +36,12 @@ struct ContentView: View {
     
     @State private var isTimerInitialized = false
     @State private var blockingStartTime: Date?
-    @State private var lastScannedQRValue: String = "No QR code scanned yet"
+    @State private var lastSimilarityScore: Double = 0.0
+    @State private var similarityScoreText: String = "No totem detected yet"
     @State private var timer: Timer?
     
     @State private var currentElapsedTime: TimeInterval = 0
-    @State private var lastQRScanTime: Date?
+    @State private var lastScanTime: Date?
 
     @State private var showingAuthorizationError = false
     @State private var showingSetupError = false
@@ -52,12 +57,14 @@ struct ContentView: View {
         // 1. Camera permission is authorized
         // 2. Screen Time permission is approved
         // 3. No modal sheets are being presented
+        // 4. There is an active totem
         return permissionsManager.cameraPermissionStatus == .authorized &&
                permissionsManager.screenTimePermissionStatus == .approved &&
                !showingFamilyPicker &&
                !showingProfilesView &&
                !showingAuthorizationError &&
-               screenTimeManager.activeProfile?.hasTokens ?? false
+               screenTimeManager.activeProfile?.hasTokens ?? false &&
+               !activeTotem.isEmpty
     }
     
     // Computed properties for Default Profile
@@ -68,6 +75,11 @@ struct ContentView: View {
     // Computed property to access the single stats object
     private var statsObject: SessionsStatsModel? {
         stats.first
+    }
+    
+    // Computed property to get the current active totem
+    private var currentTotem: TotemModel? {
+        activeTotem.first
     }
     
     var body: some View {
@@ -107,66 +119,104 @@ struct ContentView: View {
                         .padding(.top)
                     }
                     .padding()
+                } else if currentTotem == nil {
+                    // Show message when no active totem is available
+                    VStack(spacing: 16) {
+                        Image(systemName: "cube.transparent")
+                            .font(.system(size: 60))
+                            .foregroundColor(.blue)
+                        
+                        Text("No Active Totem")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        Text("Please set up a totem in the settings to use for focus mode")
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                    .padding()
                 } else {
-                    // QR Scanner View
-                    QRScanner(
-                        isScanning: isScanning,
-                        lastScannedValue: $lastScannedQRValue,
-                        validHost: triggerURLHost,
-                        onInvalidQR: {
-                            // Handle invalid QR code
-                            lastScannedQRValue = "Error: Invalid QR code"
-                        },
-                        onValidQR: { code in
-                            // Handle valid QR code
-                            handleScannedQRCode(code)
-                        }
-                    )
-                    .frame(width: 200, height: 200)
-                    .cornerRadius(16)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .inset(by: -4)
-                            .stroke(screenTimeManager.isBlocking ? .red : .blue,
-                                lineWidth: screenTimeManager.isBlocking ? 6 : 3)
-                    )
-                    .overlay(
-                        ZStack {
-                            if screenTimeManager.hasSelection {
-                                Image(systemName: "qrcode.viewfinder")
-                                    .font(.system(size: 120))
-                                    .foregroundColor(screenTimeManager.isBlocking ?
-                                        .red.opacity(0.2) : .blue.opacity(0.2))
-                            } else if permissionsManager.screenTimePermissionStatus == .approved {
-                                RoundedRectangle(cornerRadius: 16)
-                                .fill(.ultraThinMaterial)
-                                Image(systemName: "apps.iphone")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.white)
-                                    .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
-                            } else {
-                                RoundedRectangle(cornerRadius: 16)
-                                .fill(.ultraThinMaterial)
-                                Image(systemName: "hourglass")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.white)
-                                    .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
+                    // Image Similarity Scanner View with Totem Thumbnail
+                    ZStack {
+                        // Image Similarity Scanner (centered)
+                        ImageSimilarityScanner(
+                            isScanning: isScanning,
+                            similarityScore: $lastSimilarityScore,
+                            referenceFeaturePrints: currentTotem?.getFeaturePrints() ?? [],
+                            threshold: similarityThreshold,
+                            captureFrequency: 0.5,
+                            onInvalidMatch: {
+                                // Handle invalid match
+                                similarityScoreText = "Similarity too low"
+                            },
+                            onValidMatch: { score in
+                                // Handle valid match
+                                handleValidSimilarityMatch(score)
                             }
+                        )
+                        .frame(width: 200, height: 200)
+                        .cornerRadius(16)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .inset(by: -4)
+                                .stroke(screenTimeManager.isBlocking ? .red : .blue,
+                                    lineWidth: screenTimeManager.isBlocking ? 6 : 3)
+                        )
+                        .overlay(
+                            ZStack {
+                                if screenTimeManager.hasSelection {
+                                    Image(systemName: "camera.viewfinder")
+                                        .font(.system(size: 120))
+                                        .foregroundColor(screenTimeManager.isBlocking ?
+                                            .red.opacity(0.2) : .blue.opacity(0.2))
+                                } else if permissionsManager.screenTimePermissionStatus == .approved {
+                                    RoundedRectangle(cornerRadius: 16)
+                                    .fill(.ultraThinMaterial)
+                                    Image(systemName: "apps.iphone")
+                                        .font(.system(size: 60))
+                                        .foregroundColor(.white)
+                                        .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 16)
+                                    .fill(.ultraThinMaterial)
+                                    Image(systemName: "hourglass")
+                                        .font(.system(size: 60))
+                                        .foregroundColor(.white)
+                                        .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
+                                }
+                            }
+                        )
+                        
+                        // Totem Thumbnail (overlapping on the right)
+                        if let totem = currentTotem, let thumbnail = totem.getThumbnail() {
+                            Image(uiImage: thumbnail)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 80, height: 80)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                )
+                                .shadow(color: .black.opacity(0.2), radius: 4, x: 2, y: 2)
+                                .rotationEffect(.degrees(10))
+                                .offset(x: 110, y: -20)
                         }
-                    )
+                    }
+                    .padding(.horizontal)
                     
                     // Scanning status
                     HStack(spacing: 4) {
-                        Text(lastScannedQRValue.components(separatedBy: " | ").first ?? lastScannedQRValue)
+                        Text(similarityScoreText)
                             .font(.caption)
                             .foregroundColor(
-                                lastScannedQRValue.hasPrefix("Error") ? .red :
-                                lastScannedQRValue.hasPrefix("Started") ?
+                                similarityScoreText.hasPrefix("Similarity too low") ? .red :
+                                similarityScoreText.hasPrefix("Started") || similarityScoreText.hasPrefix("Stopped") ?
                                     .green : .secondary
                             )
                         
-                        if lastScannedQRValue.contains("Params: [") {
-                            Text(lastScannedQRValue.components(separatedBy: "Params: [").last?.dropLast() ?? "")
+                        if lastSimilarityScore > 0 {
+                            Text("Score: \(String(format: "%.2f", lastSimilarityScore))")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                                 .padding(.horizontal, 8)
@@ -266,7 +316,7 @@ struct ContentView: View {
                         }
                         Button("Not now", role: .cancel) { }
                     } message: {
-                        Text("Deliberate needs Screen Time access to block distracting apps. This is a core feature that won't work without this permission.")
+                        Text("Focus Totem needs Screen Time access to block distracting apps. This is a core feature that won't work without this permission.")
                     }
                     // Selection status
                     VStack {
@@ -315,7 +365,7 @@ struct ContentView: View {
                                 Spacer()
                                 Image(systemName: "exclamationmark.circle")
                                     .foregroundColor(.blue)
-                                Text("Give Deliberate permissions to block apps")
+                                Text("Give Focus Totem permissions to block apps")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 Spacer()
@@ -453,81 +503,72 @@ struct ContentView: View {
         }
     }
     
-    private func handleScannedQRCode(_ code: String) {
-        // Try to create URL from scanned code
-        guard let url = URL(string: code),
-              url.host == triggerURLHost else {
-            lastScannedQRValue = "Invalid URL: Must be a deliberate.app URL"
+    private func handleValidSimilarityMatch(_ score: Double) {
+        // Ensure we don't process scans too frequently (debounce)
+        guard lastScanTime == nil || 
+              Date().timeIntervalSince(lastScanTime!) >= Self.blockingDebounceTime else {
             return
         }
         
-        // Check if we're within the debounce period
-        if let lastScan = lastQRScanTime, 
-           Date().timeIntervalSince(lastScan) < Self.blockingDebounceTime {
-            print("Ignoring QR scan - within debounce period")
-            return
-        }
+        lastScanTime = Date()
         
-        // Record this scan time
-        lastQRScanTime = Date()
-        
-        // Extract parameters from URL
-        var params: [String: String] = [:]
-        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           let queryItems = components.queryItems {
-            for item in queryItems {
-                params[item.name] = item.value ?? ""
-            }
-        }
-        
-        // Format parameters for display
-        let paramsString = params.isEmpty ? "[]" : "[\(params.map { "\($0.key): \($0.value)" }.joined(separator: ", "))]"
-        lastScannedQRValue = "Scanned URL | Params: \(paramsString)"
-        
-        // Toggle blocking state
+        // Toggle blocking state based on current state
         if screenTimeManager.isBlocking {
+            // If currently blocking, stop blocking
             stopBlocking()
+            similarityScoreText = "Stopped blocking | Score: \(String(format: "%.2f", score))"
+            
+            // Update session stats if we were blocking
+            if let startTime = blockingStartTime {
+                let sessionDuration = Date().timeIntervalSince(startTime)
+                updateSessionStats(duration: sessionDuration)
+                blockingStartTime = nil
+            }
         } else {
+            // If not blocking, start blocking
             startBlocking()
+            similarityScoreText = "Started blocking | Score: \(String(format: "%.2f", score))"
+            
+            // Record start time for session stats
+            blockingStartTime = Date()
         }
     }
     
     private func startBlocking() {
-        // Start blocking
-        screenTimeManager.activateBlockingForCurrentProfile()
-        
-        // Create a new blocking session
-        if let stats = statsObject {
-            // If there's already an active session, don't create a new one
-            if !stats.hasActiveSession {
-                _ = stats.startNewSession()
-                try? modelContext.save()
+        // Only start blocking if not already blocking
+        if !screenTimeManager.isBlocking {
+            screenTimeManager.activateBlockingForCurrentProfile()
+            
+            // Record start time for session stats
+            blockingStartTime = Date()
+            
+            // Start timer if not already running
+            if timer == nil {
+                timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                    if let startTime = blockingStartTime {
+                        currentElapsedTime = Date().timeIntervalSince(startTime)
+                    }
+                }
             }
-        } else {
-            // Create a new stats object with a new session
-            let newStats = SessionsStatsModel()
-            _ = newStats.startNewSession()
-            modelContext.insert(newStats)
-            try? modelContext.save()
         }
-        
-        // Start timer to update UI
-        startTimer()
     }
     
     private func stopBlocking() {
-        // Stop blocking
-        screenTimeManager.deactivateBlocking()
-        
-        // End current session
-        if let stats = statsObject, stats.hasActiveSession {
-            stats.endCurrentSession()
-            try? modelContext.save()
+        // Only stop blocking if currently blocking
+        if screenTimeManager.isBlocking {
+            screenTimeManager.deactivateBlocking()
+            
+            // Update session stats if we were blocking
+            if let startTime = blockingStartTime {
+                let sessionDuration = Date().timeIntervalSince(startTime)
+                updateSessionStats(duration: sessionDuration)
+                blockingStartTime = nil
+            }
+            
+            // Stop timer
+            timer?.invalidate()
+            timer = nil
         }
-        
-        // Stop and invalidate timer
-        timer?.invalidate()
-        timer = nil
     }
     
     private func timeString(from timeInterval: TimeInterval) -> String {
@@ -560,9 +601,23 @@ struct ContentView: View {
             }
         }
     }
+    
+    private func updateSessionStats(duration: TimeInterval) {
+        if let stats = statsObject {
+            // Update the total blocked time
+            stats.totalBlockedTime += duration
+            
+            // End the current session if there is one
+            if stats.hasActiveSession {
+                stats.endCurrentSession()
+            }
+            
+            try? modelContext.save()
+        }
+    }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: [ProfileModel.self, SessionsStatsModel.self], inMemory: true)
+        .modelContainer(for: [ProfileModel.self, SessionsStatsModel.self, TotemModel.self], inMemory: true)
 }
