@@ -13,16 +13,22 @@ struct AppHeader: View {
     var tagline: String = "Live more, scroll less" // Your time, your choice | Choose what matters
     
     var body: some View {
-        VStack {
-            Text("deliberate")
-                .font(.custom("IowanOldStyle-Bold", size: 30))
-                .foregroundColor(.blue)
-            
-            if showTagline {
-                Text(tagline)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+        HStack {
+            VStack {
+                Text("Focus Totem")
+                    .font(.custom("IowanOldStyle-Bold", size: 30))
+                    .foregroundColor(.blue)
+                
+                if showTagline {
+                    Text(tagline)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
             }
+            Image("FocusTotemMascot")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 80)
         }
     }
 }
