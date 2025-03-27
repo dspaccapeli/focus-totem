@@ -200,7 +200,7 @@ struct ContentView: View {
                                 )
                                 .shadow(color: .black.opacity(0.2), radius: 4, x: 2, y: 2)
                                 .rotationEffect(.degrees(10))
-                                .offset(x: 110, y: -20)
+                                .offset(x: 110, y: 0)
                         }
                     }
                     .padding(.horizontal)
