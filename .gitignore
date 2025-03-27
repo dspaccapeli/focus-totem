@@ -1,0 +1,29 @@
+# Xcode
+# Build products
+build/
+DerivedData/
+*.xcarchive
+*.ipa
+
+# Xcode user-specific files
+*.xcuserstate
+*.xcuserdatad/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# Swift Package Manager
+.Pods/
+*.xcworkspace/
+Packages/
+.swiftpm/
+
+# Dependency managers
+Carthage/Build/
+Pods/
+
+# Miscellaneous
+*.DS_Store
+*.log
+
+.vscode
+.windsurfrules
