@@ -9,12 +9,37 @@ import SwiftUI
 import SwiftData
 import AVFoundation
 import FamilyControls
+import UIKit
+
+// Add an orientation lock controller
+class OrientationLockController: ObservableObject {
+    static let shared = OrientationLockController()
+    
+    init() {
+        // Lock the app to portrait orientation
+        UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+        AppDelegate.orientationLock = .portrait
+    }
+}
+
+// Add an AppDelegate to handle orientation
+class AppDelegate: NSObject, UIApplicationDelegate {
+    static var orientationLock = UIInterfaceOrientationMask.portrait
+    
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        return AppDelegate.orientationLock
+    }
+}
 
 @main
 struct Focus_TotemApp: App {
     @State private var sharedModelContainer: ModelContainer?
     @State private var hasCompletedOnboarding = false
     @StateObject private var permissionsManager = PermissionsManager.shared
+    @StateObject private var orientationLockController = OrientationLockController.shared
+    
+    // Register the app delegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
         WindowGroup {
