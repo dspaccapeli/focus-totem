@@ -101,7 +101,7 @@ struct ContentView: View {
                 Spacer()
                 
                 // App header
-                AppHeader()
+                AppHeader(showImage: currentTotem != nil)
                 .padding(.bottom, 60)
                 
                 if !screenTimeManager.isSetupComplete {
@@ -218,6 +218,8 @@ struct ContentView: View {
                                 .onTapGesture {
                                     showingTotemRegistration = true
                                 }
+                                .disabled(screenTimeManager.isBlocking)
+                                .opacity(screenTimeManager.isBlocking ? 0.8 : 1.0)
                         }
                     }
                     .padding(.horizontal)
@@ -336,6 +338,16 @@ struct ContentView: View {
                         // Always reset scanning states when sheet is dismissed
                         isTotemScanningActive = false
                         isTotemScanningLoading = false
+                        
+                        // Force refresh camera after a short delay regardless of how the sheet was dismissed
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            forceRefreshCamera = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                forceRefreshCamera = false
+                                // Increment scanner refresh counter to force a rebuild
+                                scannerRefreshCounter += 1
+                            }
+                        }
                     }) {
                         NavigationView {
                             TotemScanningPageView(
@@ -391,20 +403,12 @@ struct ContentView: View {
                                             print("Error managing totems: \(error.localizedDescription)")
                                         }
                                         
-                                        // Brief delay to show success message, but shorter than before
-                                        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+                                        // Brief delay to show success message
+                                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1.0 second(s)
                                         
                                         // Dismiss the sheet on the main thread
                                         await MainActor.run {
                                             showingTotemRegistration = false
-                                            
-                                            // Force refresh camera after a short delay
-                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                                forceRefreshCamera = true
-                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                                    forceRefreshCamera = false
-                                                }
-                                            }
                                         }
                                     }
                                 }
@@ -553,6 +557,17 @@ struct ContentView: View {
                     Task {
                         await screenTimeManager.activateProfile(defaultProfile)
                     }
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            // App is coming back to foreground, refresh the camera
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                forceRefreshCamera = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    forceRefreshCamera = false
+                    // Force scanner rebuild
+                    scannerRefreshCounter += 1
                 }
             }
         }
