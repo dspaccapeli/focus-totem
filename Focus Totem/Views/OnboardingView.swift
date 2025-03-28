@@ -20,6 +20,7 @@ struct OnboardingView: View {
     @State private var totemCaptured = false
     @State private var isScanning = false
     @State private var isLoading = false
+    @State private var showTotemScanner = false
         
     // Get screen width for dynamic offsets
     private var screenWidth: CGFloat {
@@ -49,14 +50,23 @@ struct OnboardingView: View {
                             }
                         }
                     
-                    TotemScanningPageView(
-                        isScanning: $isScanning,
-                        totemCaptured: $totemCaptured,
-                        isLoading: $isLoading
-                    )
-                    .modelContext(modelContext)
-                    .opacity(currentPage == 2 ? 1 : 0)
-                    .offset(x: currentPage == 2 ? 0 : (currentPage < 2 ? screenWidth : -screenWidth))
+                    // Only initialize TotemScanningPageView when needed
+                    if showTotemScanner {
+                        TotemScanningPageView(
+                            isScanning: $isScanning,
+                            totemCaptured: $totemCaptured,
+                            isLoading: $isLoading
+                        )
+                        .modelContext(modelContext)
+                        .opacity(currentPage == 2 ? 1 : 0)
+                        .offset(x: currentPage == 2 ? 0 : (currentPage < 2 ? screenWidth : -screenWidth))
+                    } else if currentPage == 2 {
+                        // Placeholder for when the scanner should be visible but isn't loaded yet
+                        VStack {
+                            ProgressView("Loading scanner...")
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
                 .animation(.easeInOut(duration: 0.3), value: currentPage)
                 
@@ -111,10 +121,15 @@ struct OnboardingView: View {
                                 currentPage = 2
                             }
                             
-                            // Start scanning after a slight delay to allow view transition
+                            // Initialize the scanner view and start scanning after a slight delay
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                isScanning = true
-                                isLoading = false
+                                showTotemScanner = true
+                                
+                                // Give a little more time for the view to initialize before starting scanning
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    isScanning = true
+                                    isLoading = false
+                                }
                             }
                         } else if currentPage == 2 && totemCaptured {
                             // Save onboarding completion status to UserDefaults
@@ -156,6 +171,10 @@ struct OnboardingView: View {
                 await checkCameraPermission()
             }
         }
+        .onDisappear {
+            // Ensure camera is stopped when view disappears
+            isScanning = false
+        }
     }
     
     private func advanceToScannerPage() {
@@ -166,10 +185,15 @@ struct OnboardingView: View {
             currentPage = 2
         }
         
-        // Start scanning after a slight delay to allow view transition
+        // Initialize the scanner view and start scanning after a slight delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            isScanning = true
-            isLoading = false
+            showTotemScanner = true
+            
+            // Give a little more time for the view to initialize before starting scanning
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                isScanning = true
+                isLoading = false
+            }
         }
     }
     
