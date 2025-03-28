@@ -50,6 +50,18 @@ struct ContentView: View {
     @State private var showingProfileSelection = false
     @State private var showingFamilyPicker = false
     @State private var showingProfilesView = false
+    
+    // States for totem registration
+    @State private var showingTotemRegistration = false
+    @State private var isTotemScanningActive = false
+    @State private var totemCaptured = false
+    @State private var isTotemScanningLoading = false
+
+    // Add a state variable to force camera refresh
+    @State private var forceRefreshCamera = false
+
+    // Add a counter to force ImageSimilarityScanner to rebuild
+    @State private var scannerRefreshCounter = 0
 
     // Computed property to determine scanning state
     private var isScanning: Bool {
@@ -64,7 +76,8 @@ struct ContentView: View {
                !showingProfilesView &&
                !showingAuthorizationError &&
                screenTimeManager.activeProfile?.hasTokens ?? false &&
-               !activeTotem.isEmpty
+               !activeTotem.isEmpty &&
+               !forceRefreshCamera // Add this condition to control camera state
     }
     
     // Computed properties for Default Profile
@@ -154,6 +167,7 @@ struct ContentView: View {
                                 handleValidSimilarityMatch(score)
                             }
                         )
+                        .id("scanner_\(scannerRefreshCounter)") // Force rebuild when counter changes
                         .frame(width: 200, height: 200)
                         .cornerRadius(16)
                         .overlay(
@@ -201,6 +215,9 @@ struct ContentView: View {
                                 .shadow(color: .black.opacity(0.2), radius: 4, x: 2, y: 2)
                                 .rotationEffect(.degrees(10))
                                 .offset(x: 110, y: 0)
+                                .onTapGesture {
+                                    showingTotemRegistration = true
+                                }
                         }
                     }
                     .padding(.horizontal)
@@ -223,6 +240,13 @@ struct ContentView: View {
                                 .padding(.vertical, 4)
                                 .background(.secondary.opacity(0.1))
                                 .cornerRadius(4)
+                        }
+                        
+                        // Debug info - show active totem info
+                        if let totem = currentTotem {
+                            Text("[\(totem.name): \(totem.getFeaturePrints().count) FPs]")
+                                .font(.caption2)
+                                .foregroundColor(.blue.opacity(0.7))
                         }
                     }
                     .padding(.horizontal)
@@ -298,7 +322,7 @@ struct ContentView: View {
                     .familyActivityPicker(isPresented: $showingFamilyPicker, 
                                         selection: $screenTimeManager.selection)
                     .onChange(of: showingFamilyPicker) { _, isPresented in
-                        if !isPresented {
+                        if !showingFamilyPicker {
                             // Picker was dismissed, process the selection
                             Task {
                                 await screenTimeManager.createOrUpdateQuickSelectionProfile(with: screenTimeManager.selection)
@@ -307,6 +331,100 @@ struct ContentView: View {
                     }
                     .sheet(isPresented: $showingProfilesView) {
                         ProfileSelectionView(screenTimeManager: screenTimeManager)
+                    }
+                    .sheet(isPresented: $showingTotemRegistration, onDismiss: {
+                        // Always reset scanning states when sheet is dismissed
+                        isTotemScanningActive = false
+                        isTotemScanningLoading = false
+                    }) {
+                        NavigationView {
+                            TotemScanningPageView(
+                                isScanning: $isTotemScanningActive,
+                                totemCaptured: $totemCaptured,
+                                isLoading: $isTotemScanningLoading
+                            )
+                            .onAppear {
+                                // Start scanning when view appears
+                                isTotemScanningActive = true
+                            }
+                            .onChange(of: totemCaptured) { _, isCaptured in
+                                // Only delete existing totems after successful registration
+                                if isCaptured {
+                                    // Create a Task to handle database operations asynchronously
+                                    Task {
+                                        // Get the most recently created totem (the new one)
+                                        let fetchDescriptor = FetchDescriptor<TotemModel>(
+                                            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+                                        )
+                                        
+                                        do {
+                                            // Get all totems sorted by creation date (newest first)
+                                            let allTotems = try modelContext.fetch(fetchDescriptor)
+                                            
+                                            // Keep the most recent totem, delete all others
+                                            if let newTotem = allTotems.first {
+                                                print("Debug: New totem has \(newTotem.getFeaturePrints().count) feature prints")
+                                                
+                                                // Set all totems to inactive first
+                                                for totem in allTotems {
+                                                    totem.isActive = false
+                                                }
+                                                
+                                                // Set the new totem as active
+                                                newTotem.isActive = true
+                                                
+                                                // Delete all older totems
+                                                for totem in allTotems where totem != newTotem {
+                                                    print("Debug: Deleting old totem: \(totem.name)")
+                                                    modelContext.delete(totem)
+                                                }
+                                                
+                                                try modelContext.save()
+                                                
+                                                // Update UI on the main thread
+                                                await MainActor.run {
+                                                    // Force scanner refresh by incrementing counter
+                                                    scannerRefreshCounter += 1
+                                                }
+                                            }
+                                        } catch {
+                                            print("Error managing totems: \(error.localizedDescription)")
+                                        }
+                                        
+                                        // Brief delay to show success message, but shorter than before
+                                        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+                                        
+                                        // Dismiss the sheet on the main thread
+                                        await MainActor.run {
+                                            showingTotemRegistration = false
+                                            
+                                            // Force refresh camera after a short delay
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                forceRefreshCamera = true
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                    forceRefreshCamera = false
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .navigationTitle("Register New Totem")
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .cancellationAction) {
+                                    Button("Cancel") {
+                                        // Stop the scanning first
+                                        isTotemScanningActive = false
+                                        
+                                        // Then dismiss the sheet
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                            showingTotemRegistration = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     .alert("Permission Required for App Blocking", isPresented: $showingAuthorizationError) {
                         Button("Allow", role: .none) {
@@ -542,14 +660,22 @@ struct ContentView: View {
             // Record start time for session stats
             blockingStartTime = Date()
             
-            // Start timer if not already running
-            if timer == nil {
-                timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-                    if let startTime = blockingStartTime {
-                        currentElapsedTime = Date().timeIntervalSince(startTime)
-                    }
+            // Create a new session
+            if let stats = statsObject {
+                if !stats.hasActiveSession {
+                    _ = stats.startNewSession()
+                    try? modelContext.save()
                 }
+            } else {
+                // Create a new stats object with a new session
+                let newStats = SessionsStatsModel()
+                _ = newStats.startNewSession()
+                modelContext.insert(newStats)
+                try? modelContext.save()
             }
+            
+            // Start the timer
+            startTimer()
         }
     }
     
@@ -557,6 +683,12 @@ struct ContentView: View {
         // Only stop blocking if currently blocking
         if screenTimeManager.isBlocking {
             screenTimeManager.deactivateBlocking()
+            
+            // End the current session if there is one
+            if let stats = statsObject, stats.hasActiveSession {
+                stats.endCurrentSession()
+                try? modelContext.save()
+            }
             
             // Update session stats if we were blocking
             if let startTime = blockingStartTime {
@@ -571,35 +703,42 @@ struct ContentView: View {
         }
     }
     
-    private func timeString(from timeInterval: TimeInterval) -> String {
-        let days = Int(timeInterval) / 86400
-        let hours = Int(timeInterval) / 3600 % 24
-        let minutes = Int(timeInterval) / 60 % 60
-        let seconds = Int(timeInterval) % 60
-        
-        if days > 0 {
-            return String(format: "%dd %02d:%02d:%02d", days, hours, minutes, seconds)
-        } else {
-            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-        }
-    }
-    
-    // Update timer function
     private func startTimer() {
-        // Refresh UI immediately instead of waiting for end of first time interval
-        if let stats = self.statsObject, stats.hasActiveSession {
-            self.currentElapsedTime = stats.currentSession?.duration ?? 0
-        }
-
         // Stop existing timer if any
         timer?.invalidate()
         
-        // Start new timer
+        // Start new timer with dispatch to main thread to handle @MainActor-isolated properties
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if let stats = self.statsObject, stats.hasActiveSession {
-                self.currentElapsedTime = stats.currentSession?.duration ?? 0
+            // Use Task to handle the @MainActor-isolated properties safely
+            Task { @MainActor in
+                if self.screenTimeManager.isBlocking {
+                    // If we're blocking, get time directly from blockingStartTime
+                    if let startTime = self.blockingStartTime {
+                        self.currentElapsedTime = Date().timeIntervalSince(startTime)
+                    } else if let stats = self.statsObject, stats.hasActiveSession {
+                        // Fallback to stats if blockingStartTime is not set
+                        self.currentElapsedTime = stats.currentSession?.duration ?? 0
+                    }
+                } else {
+                    // If not blocking, get the total time for the week
+                    if let stats = self.statsObject {
+                        // This will trigger UI update even if not blocking
+                        self.currentElapsedTime = stats.calculateTimeThisWeek()
+                    }
+                }
             }
         }
+        
+        // Trigger immediate update
+        if screenTimeManager.isBlocking {
+            if let startTime = blockingStartTime {
+                currentElapsedTime = Date().timeIntervalSince(startTime)
+            }
+        } else if let stats = statsObject {
+            currentElapsedTime = stats.calculateTimeThisWeek()
+        }
+        
+        isTimerInitialized = true
     }
     
     private func updateSessionStats(duration: TimeInterval) {
@@ -613,6 +752,19 @@ struct ContentView: View {
             }
             
             try? modelContext.save()
+        }
+    }
+    
+    private func timeString(from timeInterval: TimeInterval) -> String {
+        let days = Int(timeInterval) / 86400
+        let hours = Int(timeInterval) / 3600 % 24
+        let minutes = Int(timeInterval) / 60 % 60
+        let seconds = Int(timeInterval) % 60
+        
+        if days > 0 {
+            return String(format: "%dd %02d:%02d:%02d", days, hours, minutes, seconds)
+        } else {
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
         }
     }
 }
