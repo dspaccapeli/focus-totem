@@ -97,458 +97,21 @@ struct ContentView: View {
     
     var body: some View {
         NavigationView {
-            VStack {
-                Spacer()
-                
-                // App header
-                AppHeader(showImage: currentTotem != nil)
-                .padding(.bottom, 60)
-                
-                if !screenTimeManager.isSetupComplete {
-                    // Show loading indicator while setup is in progress
-                    ProgressView("Setting up profiles...")
-                        .progressViewStyle(CircularProgressViewStyle())
-                } else if let setupError = screenTimeManager.setupError {
-                    // Show error view if setup failed
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(.orange)
-                        
-                        Text("Setup Error")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        Text("There was a problem setting up your profiles: \(setupError.localizedDescription)")
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                        
-                        Button("Retry") {
-                            Task {
-                                try? await screenTimeManager.setup()
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .padding(.top)
-                    }
-                    .padding()
-                } else if currentTotem == nil {
-                    // Show message when no active totem is available
-                    VStack(spacing: 16) {
-                        Image(systemName: "cube.transparent")
-                            .font(.system(size: 60))
-                            .foregroundColor(.blue)
-                        
-                        Text("No Active Totem")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        Text("Please set up a totem in the settings to use for focus mode")
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                    .padding()
-                } else {
-                    // Image Similarity Scanner View with Totem Thumbnail
-                    ZStack {
-                        // Image Similarity Scanner (centered)
-                        ImageSimilarityScanner(
-                            isScanning: isScanning,
-                            similarityScore: $lastSimilarityScore,
-                            referenceFeaturePrints: currentTotem?.getFeaturePrints() ?? [],
-                            threshold: similarityThreshold,
-                            captureFrequency: 0.5,
-                            onInvalidMatch: {
-                                // Handle invalid match
-                                similarityScoreText = "Similarity too low"
-                            },
-                            onValidMatch: { score in
-                                // Handle valid match
-                                handleValidSimilarityMatch(score)
-                            }
-                        )
-                        .id("scanner_\(scannerRefreshCounter)") // Force rebuild when counter changes
-                        .frame(width: 200, height: 200)
-                        .cornerRadius(16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .inset(by: -4)
-                                .stroke(screenTimeManager.isBlocking ? .red : .blue,
-                                    lineWidth: screenTimeManager.isBlocking ? 6 : 3)
-                        )
-                        .overlay(
-                            ZStack {
-                                if screenTimeManager.hasSelection {
-                                    Image(systemName: "camera.viewfinder")
-                                        .font(.system(size: 120))
-                                        .foregroundColor(screenTimeManager.isBlocking ?
-                                            .red.opacity(0.2) : .blue.opacity(0.2))
-                                } else if permissionsManager.screenTimePermissionStatus == .approved {
-                                    RoundedRectangle(cornerRadius: 16)
-                                    .fill(.ultraThinMaterial)
-                                    Image(systemName: "apps.iphone")
-                                        .font(.system(size: 60))
-                                        .foregroundColor(.white)
-                                        .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
-                                } else {
-                                    RoundedRectangle(cornerRadius: 16)
-                                    .fill(.ultraThinMaterial)
-                                    Image(systemName: "hourglass")
-                                        .font(.system(size: 60))
-                                        .foregroundColor(.white)
-                                        .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
-                                }
-                            }
-                        )
-                        
-                        // Totem Thumbnail (overlapping on the right)
-                        if let totem = currentTotem, let thumbnail = totem.getThumbnail() {
-                            Image(uiImage: thumbnail)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 80, height: 80)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                                )
-                                .shadow(color: .black.opacity(0.2), radius: 4, x: 2, y: 2)
-                                .rotationEffect(.degrees(10))
-                                .offset(x: 110, y: 0)
-                                .onTapGesture {
-                                    showingTotemRegistration = true
-                                }
-                                .disabled(screenTimeManager.isBlocking)
-                                .opacity(screenTimeManager.isBlocking ? 0.8 : 1.0)
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // Scanning status
-                    HStack(spacing: 4) {
-                        Text(similarityScoreText)
-                            .font(.caption)
-                            .foregroundColor(
-                                similarityScoreText.hasPrefix("Similarity too low") ? .red :
-                                similarityScoreText.hasPrefix("Started") || similarityScoreText.hasPrefix("Stopped") ?
-                                    .green : .secondary
-                            )
-                        
-                        if lastSimilarityScore > 0 {
-                            Text("Score: \(String(format: "%.2f", lastSimilarityScore))")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(.secondary.opacity(0.1))
-                                .cornerRadius(4)
-                        }
-                        
-                        // Debug info - show active totem info
-                        if let totem = currentTotem {
-                            Text("[\(totem.name): \(totem.getFeaturePrints().count) FPs]")
-                                .font(.caption2)
-                                .foregroundColor(.blue.opacity(0.7))
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 16)
-                    .frame(height: 10)
-                    
-                    // App Selection Buttons
-                    VStack(spacing: 10) {
-                        if permissionsManager.screenTimePermissionStatus == .approved {
-                            // Show app selection buttons when permission is granted
-                            Button(action: {
-                                // Set selection to the Default Profile if available
-                                if let profile = defaultProfile {
-                                    screenTimeManager.selection = profile.toFamilyActivitySelection()
-                                } else {
-                                    // Reset selection if no Default Profile exists
-                                    screenTimeManager.selection = FamilyActivitySelection()
-                                }
-                                showingFamilyPicker = true
-                            }) {
-                                Label(
-                                    "Quick Select Apps", 
-                                    systemImage: defaultProfile?.hasTokens ?? false
-                                        ? (screenTimeManager.activeProfile == defaultProfile ? "checkmark.circle" : "circle")
-                                        : "plus.circle"
-                                )
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(screenTimeManager.isBlocking ? Color.secondary : .blue)
-                                .cornerRadius(10)
-                                .opacity(screenTimeManager.isBlocking ? 0.6 : 1.0)
-                                .symbolEffect(.bounce, options: .speed(1.5), value: defaultProfile?.hasTokens ?? false)
-                                .symbolEffect(.bounce, options: .speed(1.5), value: screenTimeManager.activeProfile == defaultProfile)
-                                .contentTransition(.symbolEffect(.replace.downUp))
-                            }
-                            .disabled(screenTimeManager.isBlocking)
-                            
-                            Button(action: {
-                                showingProfilesView = true
-                            }) {
-                                Label("Manage Profiles", systemImage: "rectangle.stack")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(screenTimeManager.isBlocking ? Color.secondary : .blue)
-                                    .cornerRadius(10)
-                                    .opacity(screenTimeManager.isBlocking ? 0.6 : 1.0)
-                            }
-                            .disabled(screenTimeManager.isBlocking)
-                        } else {
-                            // Show only permission request button when permission is not granted
-                            Button(action: {
-                                Task {
-                                    let granted = await permissionsManager.requestScreenTimePermission()
-                                    if !granted {
-                                        showingAuthorizationError = true
-                                    }
-                                }
-                            }) {
-                                Label("Allow Blocking Apps", systemImage: "hand.raised")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(.blue)
-                                    .cornerRadius(10)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 30)
-                    // Family Activity Picker for Default Profile
-                    .familyActivityPicker(isPresented: $showingFamilyPicker, 
-                                        selection: $screenTimeManager.selection)
-                    .onChange(of: showingFamilyPicker) { _, isPresented in
-                        if !showingFamilyPicker {
-                            // Picker was dismissed, process the selection
-                            Task {
-                                await screenTimeManager.createOrUpdateQuickSelectionProfile(with: screenTimeManager.selection)
-                            }
-                        }
-                    }
-                    .sheet(isPresented: $showingProfilesView) {
-                        ProfileSelectionView(screenTimeManager: screenTimeManager)
-                    }
-                    .sheet(isPresented: $showingTotemRegistration, onDismiss: {
-                        // Always reset scanning states when sheet is dismissed
-                        isTotemScanningActive = false
-                        isTotemScanningLoading = false
-                        
-                        // Force refresh camera after a short delay regardless of how the sheet was dismissed
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            forceRefreshCamera = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                forceRefreshCamera = false
-                                // Increment scanner refresh counter to force a rebuild
-                                scannerRefreshCounter += 1
-                            }
-                        }
+            MainContentContainer()
+                .navigationBarItems(trailing: 
+                    Button(action: {
+                        showingSettingsView = true
                     }) {
-                        NavigationView {
-                            TotemScanningPageView(
-                                isScanning: $isTotemScanningActive,
-                                totemCaptured: $totemCaptured,
-                                isLoading: $isTotemScanningLoading
-                            )
-                            .onAppear {
-                                // Start scanning when view appears
-                                isTotemScanningActive = true
-                            }
-                            .onChange(of: totemCaptured) { _, isCaptured in
-                                // Only delete existing totems after successful registration
-                                if isCaptured {
-                                    // Create a Task to handle database operations asynchronously
-                                    Task {
-                                        // Get the most recently created totem (the new one)
-                                        let fetchDescriptor = FetchDescriptor<TotemModel>(
-                                            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
-                                        )
-                                        
-                                        do {
-                                            // Get all totems sorted by creation date (newest first)
-                                            let allTotems = try modelContext.fetch(fetchDescriptor)
-                                            
-                                            // Keep the most recent totem, delete all others
-                                            if let newTotem = allTotems.first {
-                                                print("Debug: New totem has \(newTotem.getFeaturePrints().count) feature prints")
-                                                
-                                                // Set all totems to inactive first
-                                                for totem in allTotems {
-                                                    totem.isActive = false
-                                                }
-                                                
-                                                // Set the new totem as active
-                                                newTotem.isActive = true
-                                                
-                                                // Delete all older totems
-                                                for totem in allTotems where totem != newTotem {
-                                                    print("Debug: Deleting old totem: \(totem.name)")
-                                                    modelContext.delete(totem)
-                                                }
-                                                
-                                                try modelContext.save()
-                                                
-                                                // Update UI on the main thread
-                                                await MainActor.run {
-                                                    // Force scanner refresh by incrementing counter
-                                                    scannerRefreshCounter += 1
-                                                }
-                                            }
-                                        } catch {
-                                            print("Error managing totems: \(error.localizedDescription)")
-                                        }
-                                        
-                                        // Brief delay to show success message
-                                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1.0 second(s)
-                                        
-                                        // Dismiss the sheet on the main thread
-                                        await MainActor.run {
-                                            showingTotemRegistration = false
-                                        }
-                                    }
-                                }
-                            }
-                            .navigationTitle("Register New Totem")
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbar {
-                                ToolbarItem(placement: .cancellationAction) {
-                                    Button("Cancel") {
-                                        // Stop the scanning first
-                                        isTotemScanningActive = false
-                                        
-                                        // Then dismiss the sheet
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                            showingTotemRegistration = false
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .alert("Permission Required for App Blocking", isPresented: $showingAuthorizationError) {
-                        Button("Allow", role: .none) {
-                            Task {
-                                await permissionsManager.requestScreenTimePermission()
-                            }
-                        }
-                        Button("Not now", role: .cancel) { }
-                    } message: {
-                        Text("Focus Totem needs Screen Time access to block distracting apps. This is a core feature that won't work without this permission.")
-                    }
-                    // Selection status
-                    VStack {
-                        if permissionsManager.screenTimePermissionStatus == .approved {
-                            if !screenTimeManager.isBlocking {
-                                if screenTimeManager.hasSelection {
-                                    HStack(spacing: 6) {
-                                        Spacer()
-                                        Image(systemName: "checkmark.circle")
-                                            .foregroundColor(.blue)
-                                        if let activeProfile = screenTimeManager.activeProfile {
-                                            Text("Profile: \(activeProfile.name)")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        } else {
-                                            Text("Apps selected")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                        Spacer()
-                                    }
-                                } else {
-                                    HStack(spacing: 6) {
-                                        Spacer()
-                                        Image(systemName: "hand.point.up")
-                                            .foregroundColor(.blue)
-                                        Text("Select which apps to block")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                        Spacer()
-                                    }
-                                }
-                            } else {
-                                HStack(spacing: 6) {
-                                    Spacer()
-                                    Image(systemName: "qrcode.viewfinder")
-                                        .foregroundColor(.red)
-                                    Text("Scan the sticker to unlock the apps")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                }
-                            }
-                        } else {
-                            HStack(spacing: 6) {
-                                Spacer()
-                                Image(systemName: "exclamationmark.circle")
-                                    .foregroundColor(.blue)
-                                Text("Give Focus Totem permissions to block apps")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                            }
-                        }
-                    }
-                    .frame(height: 20) // Fixed height to prevent layout shifts
-                    .padding(.top, 2)
-                }
-                
-                Spacer()
-                
-                // Time Counter
-                VStack {
-                    Text(screenTimeManager.isBlocking ? "Current Session Time" : "Time Blocked This Week")
-                        .font(.caption)
-                    if isTimerInitialized {
-                        Text(timeString(from: screenTimeManager.isBlocking ? currentElapsedTime : statsObject?.calculateTimeThisWeek() ?? .zero))
+                        Image(systemName: "gearshape")
                             .font(.title2)
-                            .bold()
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(screenTimeManager.isBlocking ? .red.opacity(0.2) : .blue.opacity(0.2))
-                            .cornerRadius(8)
-                            .frame(minWidth: 120) // Ensure minimum width
-                    } else {
-                        // Use a ZStack to ensure consistent sizing with the time display
-                        ZStack {
-                            // Invisible text with the same font/size as the time display to maintain consistent dimensions
-                            // Using a placeholder that includes days format to ensure enough width
-                            Text("1d 00:00:00")
-                                .font(.title2)
-                                .bold()
-                                .opacity(0)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                            
-                            ProgressView()
-                                .controlSize(.regular)
-                        }
-                        .background(.blue.opacity(0.1))
-                        .cornerRadius(8)
-                        .frame(minWidth: 120) // Ensure minimum width
                     }
-                }
-                .padding(.bottom, 20)
-            }
-            .navigationBarItems(trailing: 
-                Button(action: {
-                    showingSettingsView = true
-                }) {
-                    Image(systemName: "gearshape")
-                        .font(.title2)
-                }
-            )
-            .sheet(isPresented: $showingSettingsView) {
-                SettingsView(
-                    screenTimeManager: screenTimeManager,
-                    onEmergencyUnblock: stopBlocking
                 )
-            }
+                .sheet(isPresented: $showingSettingsView) {
+                    SettingsView(
+                        screenTimeManager: screenTimeManager,
+                        onEmergencyUnblock: stopBlocking
+                    )
+                }
         }
         .onChange(of: showingFamilyPicker) { _, _ in
             if !showingFamilyPicker {
@@ -580,58 +143,519 @@ struct ContentView: View {
             
             // Check if apps are currently blocked
             screenTimeManager.checkCurrentBlockingState()
+        }
+        .onDisappear {
+            // Stop the timer when the view disappears
+            stopTimer()
+        }
+    }
+    
+    // MARK: - Main Content Container
+    
+    @ViewBuilder
+    private func MainContentContainer() -> some View {
+        VStack {
+            Spacer()
             
-            // If blocking is active but no active session exists, create one
-            if screenTimeManager.isBlocking {
-                if let stats = statsObject {
-                    // If there's already an active session, don't create a new one
-                    if !stats.hasActiveSession {
-                        _ = stats.startNewSession()
-                        try? modelContext.save()
-                    }
-                } else {
-                    // Create a new stats object with a new session
-                    let newStats = SessionsStatsModel()
-                    _ = newStats.startNewSession()
-                    modelContext.insert(newStats)
-                    try? modelContext.save()
-                }
-                
-                print("Restored blocking state from previous session")
+            // App header
+            AppHeader(showImage: currentTotem != nil)
+                .padding(.bottom, 60)
+            
+            if !screenTimeManager.isSetupComplete {
+                ProgressView("Setting up profiles...")
+                    .progressViewStyle(CircularProgressViewStyle())
+            } else if let setupError = screenTimeManager.setupError {
+                SetupErrorView(error: setupError)
+            } else if currentTotem == nil {
+                NoTotemView()
             } else {
-                // If not blocking but there's an active session, end it
-                if let stats = statsObject, stats.hasActiveSession {
-                    stats.endCurrentSession()
-                    try? modelContext.save()
+                MainTotemContent()
+            }
+            
+            Spacer()
+            
+            // Time Counter
+            TimeCounterView()
+                .padding(.bottom, 20)
+        }
+        .background(
+            /*
+            screenTimeManager.isBlocking ? 
+                Color(red: 0.0, green: 0.1, blue: 0.3).opacity(0.1) : 
+                Color.clear
+            */
+            Color.clear
+        )
+        .edgesIgnoringSafeArea(.all)
+    }
+    
+    // MARK: - Extracted Subviews
+    
+    @ViewBuilder
+    private func SetupErrorView(error: Error) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 50))
+                .foregroundColor(.orange)
+            
+            Text("Setup Error")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Text("There was a problem setting up your profiles: \(error.localizedDescription)")
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            Button("Retry") {
+                Task {
+                    try? await screenTimeManager.setup()
                 }
             }
+            .buttonStyle(.borderedProminent)
+            .padding(.top)
+        }
+        .padding()
+    }
+    
+    @ViewBuilder
+    private func NoTotemView() -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "cube.transparent")
+                .font(.system(size: 60))
+                .foregroundColor(.blue)
             
-            // Initialize the timer if stats object exists
-            if statsObject == nil {
-                // Create a new stats object if one doesn't exist
-                let newStats = SessionsStatsModel()
-                modelContext.insert(newStats)
-                try? modelContext.save()
-            }
-
-            isTimerInitialized = true
+            Text("No Active Totem")
+                .font(.title2)
+                .fontWeight(.bold)
             
-            // Check permissions
-            Task {
-                // Check camera permission status
-                await permissionsManager.checkCameraPermission()
+            Text("Please set up a totem in the settings to use for focus mode")
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+        }
+        .padding()
+    }
+    
+    @ViewBuilder
+    private func MainTotemContent() -> some View {
+        VStack {
+            // Image Similarity Scanner View with Totem Thumbnail
+            ZStack {
+                // Image Similarity Scanner (centered)
+                ImageSimilarityScanner(
+                    isScanning: isScanning,
+                    similarityScore: $lastSimilarityScore,
+                    referenceFeaturePrints: currentTotem?.getFeaturePrints() ?? [],
+                    threshold: similarityThreshold,
+                    captureFrequency: 0.5,
+                    onInvalidMatch: {
+                        // Handle invalid match
+                        similarityScoreText = "Similarity too low"
+                    },
+                    onValidMatch: { score in
+                        // Handle valid match
+                        handleValidSimilarityMatch(score)
+                    }
+                )
+                .id("scanner_\(scannerRefreshCounter)") // Force rebuild when counter changes
+                .frame(width: 200, height: 200)
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .inset(by: -4)
+                        .stroke(screenTimeManager.isBlocking ? .red : .blue,
+                            lineWidth: screenTimeManager.isBlocking ? 6 : 3)
+                )
+                .overlay(ScannerOverlay())
+                .zIndex(1) // Fixed z-index for scanner
                 
-                // Check screen time permission status
-                await permissionsManager.checkScreenTimePermission()
+                // Totem Thumbnail with animated position
+                TotemThumbnailView()
+                    .zIndex(screenTimeManager.isBlocking ? 0 : 2) // Animate z-index
+                    // Animate position based on size difference for proper centering
+                    .offset(x: screenTimeManager.isBlocking ? 110 : 110, // .offset(x: screenTimeManager.isBlocking ? 0 : 110, 
+                            y: screenTimeManager.isBlocking ? 0 : 0)
+                    // Animate rotation
+                    .rotationEffect(.degrees(screenTimeManager.isBlocking ? -10 : 10))
+                    // Animate scale
+                    .scaleEffect(screenTimeManager.isBlocking ? 0.9 : 1.0)
+                    // Add transition
+                    .animation(.spring, value: screenTimeManager.isBlocking)
+            }
+            .padding(.horizontal)
+            
+            // Scanning status
+            ScanningStatusView()
+            
+            // App Selection Buttons
+            AppSelectionButtons()
+                .padding(.horizontal)
+                .padding(.top, 30)
+                // Family Activity Picker for Default Profile
+                .familyActivityPicker(isPresented: $showingFamilyPicker, 
+                                    selection: $screenTimeManager.selection)
+                .onChange(of: showingFamilyPicker) { _, isPresented in
+                    if !showingFamilyPicker {
+                        // Picker was dismissed, process the selection
+                        Task {
+                            await screenTimeManager.createOrUpdateQuickSelectionProfile(with: screenTimeManager.selection)
+                        }
+                    }
+                }
+                .sheet(isPresented: $showingProfilesView) {
+                    ProfileSelectionView(screenTimeManager: screenTimeManager)
+                }
+                .sheet(isPresented: $showingTotemRegistration, onDismiss: {
+                    // Always reset scanning states when sheet is dismissed
+                    isTotemScanningActive = false
+                    isTotemScanningLoading = false
+                    
+                    // Force refresh camera after a short delay regardless of how the sheet was dismissed
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        forceRefreshCamera = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            forceRefreshCamera = false
+                            // Increment scanner refresh counter to force a rebuild
+                            scannerRefreshCounter += 1
+                        }
+                    }
+                }) {
+                    NavigationView {
+                        TotemScanningPageView(
+                            isScanning: $isTotemScanningActive,
+                            totemCaptured: $totemCaptured,
+                            isLoading: $isTotemScanningLoading
+                        )
+                        .onAppear {
+                            // Start scanning when view appears
+                            isTotemScanningActive = true
+                        }
+                        .onChange(of: totemCaptured) { _, isCaptured in
+                            // Only delete existing totems after successful registration
+                            if isCaptured {
+                                handleTotemCapture()
+                            }
+                        }
+                        .navigationTitle("Register New Totem")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Cancel") {
+                                    // Stop the scanning first
+                                    isTotemScanningActive = false
+                                    
+                                    // Then dismiss the sheet
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        showingTotemRegistration = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .alert("Permission Required for App Blocking", isPresented: $showingAuthorizationError) {
+                    Button("Allow", role: .none) {
+                        Task {
+                            await permissionsManager.requestScreenTimePermission()
+                        }
+                    }
+                    Button("Not now", role: .cancel) { }
+                } message: {
+                    Text("Focus Totem needs Screen Time access to block distracting apps. This is a core feature that won't work without this permission.")
+                }
+            
+            // Selection status
+            SelectionStatusView()
+        }
+    }
+    
+    @ViewBuilder
+    private func ScannerOverlay() -> some View {
+        ZStack {
+            if screenTimeManager.hasSelection {
+                Image(systemName: "camera.viewfinder")
+                    .font(.system(size: 120))
+                    .foregroundColor(screenTimeManager.isBlocking ?
+                        .red.opacity(0.2) : .blue.opacity(0.2))
+            } else if permissionsManager.screenTimePermissionStatus == .approved {
+                RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                Image(systemName: "apps.iphone")
+                    .font(.system(size: 60))
+                    .foregroundColor(.white)
+                    .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
+            } else {
+                RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                Image(systemName: "hourglass")
+                    .font(.system(size: 60))
+                    .foregroundColor(.white)
+                    .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
             }
         }
-        .alert("Setup Error", isPresented: $showingSetupError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            if let error = screenTimeManager.setupError {
-                Text("There was a problem setting up your profiles: \(error.localizedDescription)")
+    }
+    
+    @ViewBuilder
+    private func TotemThumbnailView() -> some View {
+        if let totem = currentTotem, let thumbnail = totem.getThumbnail() {
+            Image(uiImage: thumbnail)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.2), radius: 4, x: 2, y: 2)
+                .onTapGesture {
+                    showingTotemRegistration = true
+                }
+                .disabled(screenTimeManager.isBlocking)
+                .opacity(screenTimeManager.isBlocking ? 0.8 : 1.0)
+        }
+    }
+    
+    @ViewBuilder
+    private func ScanningStatusView() -> some View {
+        HStack(spacing: 4) {
+            ZStack {
+                Image(systemName: screenTimeManager.isBlocking ? "lock" : "lock.open")
+                    .font(.system(size: 18))
+                    .foregroundColor(screenTimeManager.isBlocking ? .red : .blue)
+                    .contentTransition(.symbolEffect(.replace))
+
+                Image(systemName: "lock.open")
+                    .font(.system(size: 18))
+                    .hidden()
+            }
+
+            Group {
+                if permissionsManager.screenTimePermissionStatus == .approved {
+                    if screenTimeManager.isBlocking {
+                        Text("Scan \(currentTotem?.name ?? "the Totem") to Unlock your Apps")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .bold()
+                            .lineLimit(2)
+                    } else {
+                        Text("Scan \(currentTotem?.name ?? "the Totem") to Lock your Apps")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                            .bold()
+                            .lineLimit(2)
+                    }
+                }
+            }
+            .frame(width: nil, alignment: .leading)
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .padding(.horizontal)
+        .padding(.top, 16)
+        .frame(height: 30)
+        .animation(.easeInOut, value: screenTimeManager.isBlocking)
+    }
+    
+    @ViewBuilder
+    private func AppSelectionButtons() -> some View {
+        VStack(spacing: 10) {
+            if permissionsManager.screenTimePermissionStatus == .approved {
+                // Show app selection buttons when permission is granted
+                Button(action: {
+                    // Set selection to the Default Profile if available
+                    if let profile = defaultProfile {
+                        screenTimeManager.selection = profile.toFamilyActivitySelection()
+                    } else {
+                        // Reset selection if no Default Profile exists
+                        screenTimeManager.selection = FamilyActivitySelection()
+                    }
+                    showingFamilyPicker = true
+                }) {
+                    Label(
+                        "Quick Select Apps", 
+                        systemImage: defaultProfile?.hasTokens ?? false
+                            ? (screenTimeManager.activeProfile == defaultProfile ? "checkmark.circle" : "circle")
+                            : "plus.circle"
+                    )
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(screenTimeManager.isBlocking ? Color.secondary : .blue)
+                    .cornerRadius(10)
+                    .opacity(screenTimeManager.isBlocking ? 0.6 : 1.0)
+                    .symbolEffect(.bounce, options: .speed(1.5), value: defaultProfile?.hasTokens ?? false)
+                    .symbolEffect(.bounce, options: .speed(1.5), value: screenTimeManager.activeProfile == defaultProfile)
+                    .contentTransition(.symbolEffect(.replace))
+                }
+                .disabled(screenTimeManager.isBlocking)
+                
+                Button(action: {
+                    showingProfilesView = true
+                }) {
+                    Label("Manage Profiles", systemImage: "rectangle.stack")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(screenTimeManager.isBlocking ? Color.secondary : .blue)
+                        .cornerRadius(10)
+                        .opacity(screenTimeManager.isBlocking ? 0.6 : 1.0)
+                }
+                .disabled(screenTimeManager.isBlocking)
             } else {
-                Text("An unknown error occurred during setup.")
+                // Show only permission request button when permission is not granted
+                Button(action: {
+                    Task {
+                        let granted = await permissionsManager.requestScreenTimePermission()
+                        if !granted {
+                            showingAuthorizationError = true
+                        }
+                    }
+                }) {
+                    Label("Allow Blocking Apps", systemImage: "hand.raised")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(.blue)
+                        .cornerRadius(10)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func SelectionStatusView() -> some View {
+        VStack {
+            if permissionsManager.screenTimePermissionStatus == .approved {
+                if !screenTimeManager.isBlocking {
+                    if screenTimeManager.hasSelection {
+                        HStack(spacing: 6) {
+                            Spacer()
+                            Image(systemName: "checkmark.circle")
+                                .foregroundColor(.blue)
+                            if let activeProfile = screenTimeManager.activeProfile {
+                                Text("Profile: \(activeProfile.name)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("Apps selected")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                        }
+                    } else {
+                        HStack(spacing: 6) {
+                            Spacer()
+                            Image(systemName: "hand.point.up")
+                                .foregroundColor(.blue)
+                            Text("Select which apps to block")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                    }
+                }
+            } else {
+                HStack(spacing: 6) {
+                    Spacer()
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundColor(.blue)
+                    Text("Give Focus Totem permissions to block apps")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            }
+        }
+        .frame(height: 20) // Fixed height to prevent layout shifts
+        .padding(.top, 2)
+    }
+    
+    @ViewBuilder
+    private func TimeCounterView() -> some View {
+        VStack {
+            Text(screenTimeManager.isBlocking ? "Current Session Time" : "Time Blocked This Week")
+                .font(.caption)
+            if isTimerInitialized {
+                Text(timeString(from: screenTimeManager.isBlocking ? currentElapsedTime : statsObject?.calculateTimeThisWeek() ?? .zero))
+                    .font(.title2)
+                    .bold()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(screenTimeManager.isBlocking ? .red.opacity(0.2) : .blue.opacity(0.2))
+                    .cornerRadius(8)
+                    .frame(minWidth: 120) // Ensure minimum width
+            } else {
+                // Use a ZStack to ensure consistent sizing with the time display
+                ZStack {
+                    // Invisible text with the same font/size as the time display to maintain consistent dimensions
+                    // Using a placeholder that includes days format to ensure enough width
+                    Text("1d 00:00:00")
+                        .font(.title2)
+                        .bold()
+                        .opacity(0)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    
+                    ProgressView()
+                        .controlSize(.regular)
+                }
+                .background(.blue.opacity(0.1))
+                .cornerRadius(8)
+                .frame(minWidth: 120) // Ensure minimum width
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func handleTotemCapture() {
+        // Create a Task to handle database operations asynchronously
+        Task {
+            // Get the most recently created totem (the new one)
+            let fetchDescriptor = FetchDescriptor<TotemModel>(
+                sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+            )
+            
+            do {
+                // Get all totems sorted by creation date (newest first)
+                let allTotems = try modelContext.fetch(fetchDescriptor)
+                
+                // Keep the most recent totem, delete all others
+                if let newTotem = allTotems.first {
+                    print("Debug: New totem has \(newTotem.getFeaturePrints().count) feature prints")
+                    
+                    // Set all totems to inactive first
+                    for totem in allTotems {
+                        totem.isActive = false
+                    }
+                    
+                    // Set the new totem as active
+                    newTotem.isActive = true
+                    
+                    // Delete all older totems
+                    for totem in allTotems where totem != newTotem {
+                        print("Debug: Deleting old totem: \(totem.name)")
+                        modelContext.delete(totem)
+                    }
+                    
+                    try modelContext.save()
+                    
+                    // Update UI on the main thread
+                    await MainActor.run {
+                        // Force scanner refresh by incrementing counter
+                        scannerRefreshCounter += 1
+                    }
+                }
+            } catch {
+                print("Error managing totems: \(error.localizedDescription)")
+            }
+            
+            // Brief delay to show success message
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1.0 second(s)
+            
+            // Dismiss the sheet on the main thread
+            await MainActor.run {
+                showingTotemRegistration = false
             }
         }
     }
@@ -754,6 +778,12 @@ struct ContentView: View {
         }
         
         isTimerInitialized = true
+    }
+    
+    private func stopTimer() {
+        // Invalidate the timer
+        timer?.invalidate()
+        timer = nil
     }
     
     private func updateSessionStats(duration: TimeInterval) {
