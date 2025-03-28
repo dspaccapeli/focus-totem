@@ -15,7 +15,7 @@ struct WelcomePageView: View {
             
             VStack(spacing: 20) {
                 // Header
-                AppHeader()
+                AppHeader(showImage: false)
                 // Mascot
                 Image("DeliBuddy")
                     .resizable()
