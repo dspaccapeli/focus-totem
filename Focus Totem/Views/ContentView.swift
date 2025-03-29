@@ -815,6 +815,21 @@ struct ContentView: View {
 }
 
 #Preview {
+    // Helper function to set up the preview container and data
+    let setupPreview: () -> ModelContainer = {
+        let container = try! ModelContainer(for: ProfileModel.self, SessionsStatsModel.self, TotemModel.self,
+                                            configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        
+        let sampleName = "Sample Totem"
+        let sampleFeaturePrint = VNFeaturePrintObservation()
+        let sampleImageData = UIImage(systemName: "cube.fill")?.withTintColor(.blue, renderingMode: .alwaysOriginal).pngData() ?? Data()
+        let sampleTotem = TotemModel(name: sampleName, featurePrints: [sampleFeaturePrint], imageDataArray: [sampleImageData])
+        
+        container.mainContext.insert(sampleTotem)
+        return container
+    }
+    
+    // Return the ContentView using the prepared container
     ContentView()
-        .modelContainer(for: [ProfileModel.self, SessionsStatsModel.self, TotemModel.self], inMemory: true)
+        .modelContainer(setupPreview())
 }
