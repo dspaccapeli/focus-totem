@@ -96,16 +96,18 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             MainContentContainer()
-                .navigationBarItems(trailing: 
-                    Button(action: {
-                        showingSettingsView = true
-                    }) {
-                        Image(systemName: "gearshape")
-                            .font(.title2)
+                .toolbar(content: {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            showingSettingsView = true
+                        }) {
+                            Image(systemName: "gearshape")
+                                .font(.title2)
+                        }
                     }
-                )
+                })
                 .sheet(isPresented: $showingSettingsView) {
                     SettingsView(
                         screenTimeManager: screenTimeManager,
@@ -156,10 +158,20 @@ struct ContentView: View {
     private func MainContentContainer() -> some View {
         VStack {
             Spacer()
+            /*
+            Color.green
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            */
             
             // App header
             AppHeader(showImage: currentTotem != nil)
-                .padding(.bottom, 60)
+                .padding(.top, 40)
+
+            Spacer()
+            /*
+            Color.yellow
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            */
             
             if !screenTimeManager.isSetupComplete {
                 ProgressView("Setting up profiles...")
@@ -169,14 +181,20 @@ struct ContentView: View {
             } else if currentTotem == nil {
                 NoTotemView()
             } else {
+                // Main content without spacers to prevent stretching
                 MainTotemContent()
             }
             
             Spacer()
+            /*
+            Color.orange
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            */
+
             
             // Time Counter
             TimeCounterView()
-                .padding(.bottom, 20)
+                .padding(.bottom, 40)
         }
         .background(
             /*
@@ -238,6 +256,9 @@ struct ContentView: View {
     @ViewBuilder
     private func MainTotemContent() -> some View {
         VStack {
+            // Scanning status
+            ScanningStatusView()
+            
             // Image Similarity Scanner View with Totem Thumbnail
             ZStack {
                 // Image Similarity Scanner (centered)
@@ -282,9 +303,6 @@ struct ContentView: View {
                     .animation(.spring, value: screenTimeManager.isBlocking)
             }
             .padding(.horizontal)
-            
-            // Scanning status
-            ScanningStatusView()
             
             // App Selection Buttons
             AppSelectionButtons()
@@ -364,7 +382,7 @@ struct ContentView: View {
                 }
             
             // Selection status
-            SelectionStatusView()
+            // SelectionStatusView()
         }
     }
     
@@ -417,28 +435,77 @@ struct ContentView: View {
     
     @ViewBuilder
     private func ScanningStatusView() -> some View {
-        HStack(spacing: 4) {
-            ZStack {
-                Image(systemName: screenTimeManager.isBlocking ? "lock" : "lock.open")
-                    .font(.system(size: 18))
-                    .foregroundColor(screenTimeManager.isBlocking ? .red : .blue)
-                    .contentTransition(.symbolEffect(.replace))
+        VStack (spacing: 6) { 
+            HStack(spacing: 4) {
+                if permissionsManager.screenTimePermissionStatus != .approved {
+                    Text("Let's finish the setup")
+                        .font(.title2)
+                        .bold()
+                        .foregroundColor(.blue)
 
-                Image(systemName: "lock.open")
-                    .font(.system(size: 18))
-                    .hidden()
+                    ZStack {
+                        Image(systemName: "hand.point.down")
+                            .font(.system(size: 22))
+                            .foregroundColor(.blue)
+                            .rotationEffect(.degrees(30))
+                    }
+                } else if !(defaultProfile?.hasTokens ?? false) {
+                    Text("One more step!")
+                        .font(.title2)
+                        .bold()
+                        .foregroundColor(.blue)
+
+                    ZStack {
+                        Image(systemName: "hand.point.down")
+                            .font(.system(size: 22))
+                            .foregroundColor(.blue)
+                            .rotationEffect(.degrees(30))
+                    }
+                } else {
+                    Text(screenTimeManager.isBlocking ? "Your Apps are Locked" : "It's time to focus!")
+                        .font(.title)
+                        .bold()
+                        .foregroundColor(screenTimeManager.isBlocking ? .red : .blue)
+
+                    ZStack {
+                        Image(systemName: screenTimeManager.isBlocking ? "lock" : "lock.open")
+                            .font(.system(size: 18))
+                            .foregroundColor(screenTimeManager.isBlocking ? .red : .blue)
+                            .contentTransition(.symbolEffect(.replace))
+
+                        Image(systemName: "lock.open")
+                            .font(.system(size: 18))
+                            .hidden()
+                    }
+                }
             }
+            .padding(.horizontal)
+            .animation(.easeInOut, value: screenTimeManager.isBlocking)
+            .frame(width: nil, alignment: .leading)
+            .fixedSize(horizontal: true, vertical: false)
 
             Group {
-                if permissionsManager.screenTimePermissionStatus == .approved {
+                if permissionsManager.screenTimePermissionStatus != .approved {
+                    Text("Enable the permission below")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .bold()
+                        .lineLimit(2)
+                } else if !(defaultProfile?.hasTokens ?? false) {
+                    Text("Select the apps you want to block")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .bold()
+                        .lineLimit(2)
+                } else {
                     if screenTimeManager.isBlocking {
-                        Text("Scan \(currentTotem?.name ?? "the Totem") to Unlock your Apps")
+                        Text("Scan your \(currentTotem?.name ?? "the Totem") to Unlock your Apps")
                             .font(.caption)
                             .foregroundColor(.red)
                             .bold()
                             .lineLimit(2)
                     } else {
-                        Text("Scan \(currentTotem?.name ?? "the Totem") to Lock your Apps")
+                        Text("Scan your \(currentTotem?.name ?? "the Totem") to Lock your Apps")
                             .font(.caption)
                             .foregroundColor(.blue)
                             .bold()
@@ -449,10 +516,8 @@ struct ContentView: View {
             .frame(width: nil, alignment: .leading)
             .fixedSize(horizontal: true, vertical: false)
         }
-        .padding(.horizontal)
-        .padding(.top, 16)
-        .frame(height: 30)
-        .animation(.easeInOut, value: screenTimeManager.isBlocking)
+        .fixedSize(horizontal: true, vertical: true)
+        .padding(.bottom, 16)
     }
     
     @ViewBuilder
@@ -471,7 +536,7 @@ struct ContentView: View {
                     showingFamilyPicker = true
                 }) {
                     Label(
-                        "Quick Select Apps", 
+                        "Select Apps",
                         systemImage: defaultProfile?.hasTokens ?? false
                             ? (screenTimeManager.activeProfile == defaultProfile ? "checkmark.circle" : "circle")
                             : "plus.circle"
@@ -492,10 +557,10 @@ struct ContentView: View {
                     showingProfilesView = true
                 }) {
                     Label("Manage Profiles", systemImage: "rectangle.stack")
-                        .font(.headline)
-                        .foregroundColor(.white)
+                        .font(.caption) // .font(.headline)
+                        .foregroundColor(.blue) //.foregroundColor(.white)
                         .padding()
-                        .background(screenTimeManager.isBlocking ? Color.secondary : .blue)
+                        // .background(screenTimeManager.isBlocking ? Color.secondary : .blue)
                         .cornerRadius(10)
                         .opacity(screenTimeManager.isBlocking ? 0.6 : 1.0)
                 }
@@ -528,7 +593,6 @@ struct ContentView: View {
                 if !screenTimeManager.isBlocking {
                     if screenTimeManager.hasSelection {
                         HStack(spacing: 6) {
-                            Spacer()
                             Image(systemName: "checkmark.circle")
                                 .foregroundColor(.blue)
                             if let activeProfile = screenTimeManager.activeProfile {
@@ -540,29 +604,24 @@ struct ContentView: View {
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
-                            Spacer()
                         }
                     } else {
                         HStack(spacing: 6) {
-                            Spacer()
                             Image(systemName: "hand.point.up")
                                 .foregroundColor(.blue)
                             Text("Select which apps to block")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Spacer()
                         }
                     }
                 }
             } else {
                 HStack(spacing: 6) {
-                    Spacer()
                     Image(systemName: "exclamationmark.circle")
                         .foregroundColor(.blue)
                     Text("Give Focus Totem permissions to block apps")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Spacer()
                 }
             }
         }
