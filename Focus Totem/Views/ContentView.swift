@@ -39,6 +39,9 @@ struct ContentView: View {
     @State private var lastSimilarityScore: Double = 0.0
     @State private var similarityScoreText: String = "No totem detected yet"
     @State private var timer: Timer?
+
+    // Got lower threshold after block/unblock
+    @State private var canTriggerAfterThreshold: Bool = true
     
     @State private var currentElapsedTime: TimeInterval = 0
     @State private var lastScanTime: Date?
@@ -271,8 +274,20 @@ struct ContentView: View {
                     onInvalidMatch: {
                         // Handle invalid match
                         similarityScoreText = "Similarity too low"
+                        
+                        // Need to scan invalid image before being able to trigger again
+                        if canTriggerAfterThreshold == false {
+                            canTriggerAfterThreshold = true
+                        }
                     },
                     onValidMatch: { score in
+                        // Need to see if we can trigger based on previous scanning state
+                        if canTriggerAfterThreshold == false {
+                            return
+                        } else {
+                            canTriggerAfterThreshold = false
+                        }
+
                         // Handle valid match
                         handleValidSimilarityMatch(score)
                     }
