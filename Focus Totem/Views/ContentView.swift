@@ -283,8 +283,11 @@ struct ContentView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
                         .inset(by: -4)
-                        .stroke(screenTimeManager.isBlocking ? .red : .blue,
-                            lineWidth: screenTimeManager.isBlocking ? 6 : 3)
+                        .stroke(screenTimeManager.isBlocking ?
+                                Color.red.opacity(lastSimilarityScore <= 0 ? 0.1 : 0.1 + pow(lastSimilarityScore / similarityThreshold, 2) * 0.9) :
+                                Color.blue.opacity(lastSimilarityScore <= 0 ? 0.1 : 0.1 + pow(lastSimilarityScore / similarityThreshold, 2) * 0.9),
+                            lineWidth: lastSimilarityScore <= 0 ? 3 : 3 + (lastSimilarityScore / similarityThreshold) * 3)
+                            //lineWidth: screenTimeManager.isBlocking ? 6 : 3)
                 )
                 .overlay(ScannerOverlay())
                 .zIndex(1) // Fixed z-index for scanner
