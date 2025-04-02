@@ -23,7 +23,7 @@ struct CameraPermissionPageView: View {
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
             
-            Text("Deliberate needs camera access to scan stickers. This is how you'll control app blocking.")
+            Text("Focus Totem needs camera access to recognize the totem. This is how you'll control app blocking.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -35,8 +35,8 @@ struct CameraPermissionPageView: View {
                     .fill(Color.black.opacity(0.05))
                     .frame(width: 200, height: 200)
                 
-                Image(systemName: "qrcode.viewfinder")
-                    .font(.system(size: 120))
+                Image(systemName: "camera.badge.clock")
+                    .font(.system(size: 90))
                     .foregroundColor(Color.blue.opacity(0.2))
             }
             .overlay(
