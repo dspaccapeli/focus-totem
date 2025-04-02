@@ -640,6 +640,7 @@ struct ContentView: View {
                 }
                 .disabled(screenTimeManager.isBlocking)
                 
+                /*
                 Button(action: {
                     showingProfilesView = true
                 }) {
@@ -652,6 +653,7 @@ struct ContentView: View {
                         .opacity(screenTimeManager.isBlocking ? 0.6 : 1.0)
                 }
                 .disabled(screenTimeManager.isBlocking)
+                */
             } else {
                 // Show only permission request button when permission is not granted
                 Button(action: {
