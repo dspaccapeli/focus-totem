@@ -18,8 +18,10 @@ struct AppHeader: View {
         HStack {
             VStack {
                 Text("Focus Totem")
-                    .font(.custom("IowanOldStyle-Bold", size: 30))
+                    .font(.title2)
+                    .bold()
                     .foregroundColor(.blue)
+                    //.font(.custom("IowanOldStyle-Bold", size: 30))
                 
                 if showTagline {
                     Text(tagline)
@@ -32,7 +34,7 @@ struct AppHeader: View {
                 Image("FocusTotemMascot")
                     .resizable()
                     .scaledToFit()
-                    .frame(height: 80)
+                    .frame(height: 60)
             }
         }
     }
