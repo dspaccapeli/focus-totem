@@ -66,6 +66,11 @@ struct ContentView: View {
     // Add a counter to force ImageSimilarityScanner to rebuild
     @State private var scannerRefreshCounter = 0
 
+    // Add state variables for confirmation alert
+    @State private var showingBlockingConfirmation = false
+    @State private var hapticFeedback = UIImpactFeedbackGenerator(style: .medium)
+    @State private var isLongPressing = false
+
     // Computed property to determine scanning state
     private var isScanning: Bool {
         // Only scan if:
@@ -305,7 +310,61 @@ struct ContentView: View {
                             //lineWidth: screenTimeManager.isBlocking ? 6 : 3)
                 )
                 .overlay(ScannerOverlay())
+                .overlay(
+                    // Visual feedback overlay for long press
+                    ZStack {
+                        if isLongPressing && !screenTimeManager.isBlocking {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.blue.opacity(0.3))
+                                .overlay(
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 50))
+                                        .foregroundColor(.white)
+                                        .opacity(0.8)
+                                )
+                                .transition(.opacity)
+                        }
+                    }
+                    .animation(.easeInOut(duration: 1.0), value: isLongPressing)
+                )
                 .zIndex(1) // Fixed z-index for scanner
+                // Add long press gesture to start blocking
+                .onLongPressGesture(minimumDuration: 1.0, pressing: { isPressing in
+                    // Update the pressing state for visual feedback
+                    // Only show visual feedback if not already blocking and has app selection
+                    if !screenTimeManager.isBlocking && screenTimeManager.hasSelection {
+                        isLongPressing = isPressing
+                        
+                        // Provide a small haptic feedback when starting the press
+                        if isPressing {
+                            hapticFeedback.prepare()
+                            hapticFeedback.impactOccurred(intensity: 0.5)
+                        }
+                    }
+                }) {
+                    // Only show confirmation if not already blocking and has app selection
+                    if !screenTimeManager.isBlocking && screenTimeManager.hasSelection {
+                        // Trigger stronger haptic feedback when long press completes
+                        hapticFeedback.impactOccurred(intensity: 1.0)
+                        
+                        // Show confirmation alert
+                        showingBlockingConfirmation = true
+                    }
+                }
+                // Add alert for blocking confirmation
+                .alert("Start Blocking Apps?", isPresented: $showingBlockingConfirmation) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Start Blocking", role: .destructive) {
+                        // Start blocking
+                        startBlocking()
+                        similarityScoreText = "Started blocking"
+                        
+                        // Record start time for session stats
+                        blockingStartTime = Date()
+                    }
+                } message: {
+                    Text("This will block access to your selected apps. You'll need to scan your \(currentTotem?.name ?? "totem") to unblock them.")
+                }
                 
                 // Totem Thumbnail with animated position
                 TotemThumbnailView()
