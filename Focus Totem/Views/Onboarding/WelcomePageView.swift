@@ -13,33 +13,37 @@ struct WelcomePageView: View {
         VStack(spacing: 20) {
             Spacer()
             
-            VStack(spacing: 20) {
-                // Header
-                AppHeader(showImage: false)
-                // Mascot
-                Image("DeliBuddy")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 200, height: 200)
+            // Header
+            AppHeader(showImage: false)
+            
+            Spacer()
+            
+            // Mascot
+            Image("DeliBuddy")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 200, height: 200)
+            
+            Spacer()
+            
+            VStack(spacing: 10) {
+                Text("Take control of your digital life")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
                 
-                VStack(spacing: 10) {
-                    Text("Take control of your digital life")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                        .multilineTextAlignment(.center)
-                    
-                    Text("In a world of endless scrolling and notifications, we spend too much time on our devices. Deliberate helps you reclaim your attention.")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                Text("In a world of endless scrolling and notifications, we spend too much time on our devices. Focus Totem helps you reclaim your attention.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             
             Spacer()
             
+            /*
             // Center the feature list as a unit
             HStack {
                 Spacer()
@@ -56,6 +60,7 @@ struct WelcomePageView: View {
             .padding(.bottom, 30)
             
             Spacer()
+            */
         }
         .padding(.horizontal, 30)
     }
