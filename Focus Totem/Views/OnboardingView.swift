@@ -15,7 +15,18 @@ struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @Binding var hasCompletedOnboarding: Bool
     @StateObject private var permissionsManager = PermissionsManager.shared
-    @State private var currentPage = 0
+    
+    // Page indices
+    private enum Page {
+        static let welcome = 0
+        static let explanation = 1
+        static let cameraPermission = 2
+        static let totemScanning = 3
+    }
+
+    private let pageCount = 4
+    
+    @State private var currentPage = Page.welcome
     @State private var cameraPermissionGranted = false
     @State private var totemCaptured = false
     @State private var isScanning = false
@@ -36,15 +47,19 @@ struct OnboardingView: View {
                 ZStack {
                     // All views are in the hierarchy, but only the active one is visible
                     WelcomePageView()
-                        .opacity(currentPage == 0 ? 1 : 0)
-                        .offset(x: currentPage == 0 ? 0 : (currentPage < 0 ? screenWidth : -screenWidth))
+                        .opacity(currentPage == Page.welcome ? 1 : 0)
+                        .offset(x: currentPage == Page.welcome ? 0 : (currentPage < Page.welcome ? screenWidth : -screenWidth))
+                    
+                    ExplanationPageView()
+                        .opacity(currentPage == Page.explanation ? 1 : 0)
+                        .offset(x: currentPage == Page.explanation ? 0 : (currentPage < Page.explanation ? screenWidth : -screenWidth))
                     
                     CameraPermissionPageView(cameraPermissionGranted: $cameraPermissionGranted)
-                        .opacity(currentPage == 1 ? 1 : 0)
-                        .offset(x: currentPage == 1 ? 0 : (currentPage < 1 ? screenWidth : -screenWidth))
+                        .opacity(currentPage == Page.cameraPermission ? 1 : 0)
+                        .offset(x: currentPage == Page.cameraPermission ? 0 : (currentPage < Page.cameraPermission ? screenWidth : -screenWidth))
                         .onChange(of: cameraPermissionGranted) { oldValue, newValue in
                             // Only advance if we're on the camera permission page AND permission was just granted
-                            if currentPage == 1 && !oldValue && newValue {
+                            if currentPage == Page.cameraPermission && !oldValue && newValue {
                                 // Permission was just granted, advance to next page
                                 advanceToScannerPage()
                             }
@@ -58,9 +73,9 @@ struct OnboardingView: View {
                             isLoading: $isLoading
                         )
                         .modelContext(modelContext)
-                        .opacity(currentPage == 2 ? 1 : 0)
-                        .offset(x: currentPage == 2 ? 0 : (currentPage < 2 ? screenWidth : -screenWidth))
-                    } else if currentPage == 2 {
+                        .opacity(currentPage == Page.totemScanning ? 1 : 0)
+                        .offset(x: currentPage == Page.totemScanning ? 0 : (currentPage < Page.totemScanning ? screenWidth : -screenWidth))
+                    } else if currentPage == Page.totemScanning {
                         // Placeholder for when the scanner should be visible but isn't loaded yet
                         VStack {
                             ProgressView("Loading scanner...")
@@ -74,8 +89,8 @@ struct OnboardingView: View {
                 HStack(alignment: .center) {
                     // Back button (hidden on first page)
                     Button(action: {
-                        if currentPage > 0 {
-                            if currentPage == 2 {
+                        if currentPage > Page.welcome {
+                            if currentPage == Page.totemScanning {
                                 isScanning = false
                             }
                             withAnimation {
@@ -90,15 +105,15 @@ struct OnboardingView: View {
                         }
                         .foregroundColor(.blue)
                         .padding()
-                        .opacity(currentPage == 0 ? 0 : 1)
+                        .opacity(currentPage == Page.welcome ? 0 : 1)
                     }
-                    .disabled(currentPage == 0)
+                    .disabled(currentPage == Page.welcome)
                     
                     Spacer()
 
                     // Page indicators
                     HStack(spacing: 8) {
-                        ForEach(0..<3) { index in
+                        ForEach(0..<pageCount, id: \.self) { index in
                             Circle()
                                 .fill(currentPage == index ? Color.blue : Color.gray.opacity(0.5))
                                 .frame(width: 8, height: 8)
@@ -109,16 +124,16 @@ struct OnboardingView: View {
                     
                     // Next/Done button
                     Button(action: {
-                        if currentPage == 0 {
+                        if currentPage == Page.welcome || currentPage == Page.explanation {
                             withAnimation {
-                                currentPage = 1
+                                currentPage += 1
                             }
-                        } else if currentPage == 1 && cameraPermissionGranted {
+                        } else if currentPage == Page.cameraPermission && cameraPermissionGranted {
                             // First show loading state
                             isLoading = true
                             
                             withAnimation {
-                                currentPage = 2
+                                currentPage = Page.totemScanning
                             }
                             
                             // Initialize the scanner view and start scanning after a slight delay
@@ -131,7 +146,7 @@ struct OnboardingView: View {
                                     isLoading = false
                                 }
                             }
-                        } else if currentPage == 2 && totemCaptured {
+                        } else if currentPage == Page.totemScanning && totemCaptured {
                             // Save onboarding completion status to UserDefaults
                             UserDefaults.standard.set(true, forKey: "onboardingCompleted")
                             
@@ -143,9 +158,9 @@ struct OnboardingView: View {
                         }
                     }) {
                         HStack {
-                            Text(currentPage < 2 ? "Next" : "Done")
-                            if totemCaptured || currentPage < 2 { 
-                                Image(systemName: currentPage < 2 ? "chevron.right" : "checkmark")
+                            Text(currentPage < Page.totemScanning ? "Next" : "Done")
+                            if totemCaptured || currentPage < Page.totemScanning { 
+                                Image(systemName: currentPage < Page.totemScanning ? "chevron.right" : "checkmark")
                                     .font(.body)
                             }
                         }
@@ -153,14 +168,14 @@ struct OnboardingView: View {
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
                         .background(
-                            (currentPage == 1 && !cameraPermissionGranted) || 
-                            (currentPage == 2 && !totemCaptured) || isLoading ? 
+                            (currentPage == Page.cameraPermission && !cameraPermissionGranted) || 
+                            (currentPage == Page.totemScanning && !totemCaptured) || isLoading ? 
                             Color.gray : Color.blue
                         )
                         .cornerRadius(10)
                     }
-                    .disabled((currentPage == 1 && !cameraPermissionGranted) || 
-                              (currentPage == 2 && !totemCaptured) || isLoading)
+                    .disabled((currentPage == Page.cameraPermission && !cameraPermissionGranted) || 
+                              (currentPage == Page.totemScanning && !totemCaptured) || isLoading)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -182,7 +197,7 @@ struct OnboardingView: View {
         isLoading = true
         
         withAnimation {
-            currentPage = 2
+            currentPage = Page.totemScanning
         }
         
         // Initialize the scanner view and start scanning after a slight delay
