@@ -843,6 +843,10 @@ struct ContentView: View {
         // Only start blocking if not already blocking
         if !screenTimeManager.isBlocking {
             screenTimeManager.activateBlockingForCurrentProfile()
+
+            // Trigger haptic feedback on unblock
+            hapticFeedback.prepare()
+            hapticFeedback.impactOccurred(intensity: 0.3)
             
             // Record start time for session stats
             blockingStartTime = Date()
@@ -870,6 +874,10 @@ struct ContentView: View {
         // Only stop blocking if currently blocking
         if screenTimeManager.isBlocking {
             screenTimeManager.deactivateBlocking()
+            
+            // Trigger haptic feedback on unblock
+            hapticFeedback.prepare()
+            hapticFeedback.impactOccurred(intensity: 0.3)
             
             // End the current session if there is one
             if let stats = statsObject, stats.hasActiveSession {
