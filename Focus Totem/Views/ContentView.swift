@@ -133,6 +133,22 @@ struct ContentView: View {
                 }
             }
         }
+        .onChange(of: showingSettingsView) { _, isShowing in
+            if !isShowing {
+                // Settings view was dismissed, refresh the scanner
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    // First stop the camera
+                    forceRefreshCamera = true
+                    
+                    // Then restart it after a brief delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        forceRefreshCamera = false
+                        // Force scanner rebuild
+                        scannerRefreshCounter += 1
+                    }
+                }
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             // App is coming back to foreground, refresh the camera
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
