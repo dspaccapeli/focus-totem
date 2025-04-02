@@ -128,7 +128,9 @@ struct TotemScanningPageView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
 
-                    Text("Take at least \(requiredCaptureCount) pictures of your totem from different angles")
+                    (Text("Take ")
+                     + Text("at least \(requiredCaptureCount)").bold().foregroundColor(.black)
+                     + Text(" pictures of your totem from different angles"))
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -148,6 +150,7 @@ struct TotemScanningPageView: View {
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
+                        .padding(.bottom, 10)
                     
                     // Camera view for capturing totem image
                     HStack(alignment: .center) {
@@ -287,7 +290,7 @@ struct TotemScanningPageView: View {
                         // Show progress of captures
                         HStack(spacing: 8) {
                             // Show first 3 dots
-                            ForEach(0..<3, id: \.self) { index in
+                            ForEach(0..<requiredCaptureCount, id: \.self) { index in
                                 Circle()
                                     .fill(index < capturedFeaturePrints.count ? Color.blue : Color.gray.opacity(0.3))
                                     .frame(width: 12, height: 12)
