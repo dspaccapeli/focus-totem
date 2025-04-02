@@ -380,6 +380,14 @@ struct ContentView: View {
                     .animation(.spring, value: screenTimeManager.isBlocking)
             }
             .padding(.horizontal)
+
+            Text(!screenTimeManager.isBlocking && screenTimeManager.hasSelection ? "Or long press to start a session." : " ")
+                .padding(.top, 5)
+                .font(.caption)
+                .foregroundColor(.blue)
+                .frame(height: 10) // Fixed height to prevent layout shifts
+                //.bold()
+            
             
             // App Selection Buttons
             AppSelectionButtons()
@@ -579,14 +587,14 @@ struct ContentView: View {
                         Text("Scan your \(currentTotem?.name ?? "the Totem") to Unlock your Apps")
                             .font(.caption)
                             .foregroundColor(.red)
-                            .bold()
                             .lineLimit(2)
+                            //.bold()
                     } else {
                         Text("Scan your \(currentTotem?.name ?? "the Totem") to Lock your Apps")
                             .font(.caption)
                             .foregroundColor(.blue)
-                            .bold()
                             .lineLimit(2)
+                            //.bold()
                     }
                 }
             }
