@@ -621,7 +621,9 @@ struct ContentView: View {
                     showingFamilyPicker = true
                 }) {
                     Label(
-                        "Select Apps",
+                        defaultProfile?.hasTokens ?? false
+                            ? (screenTimeManager.activeProfile == defaultProfile ? "Change Apps" : "Select Apps")
+                            : "Select Apps",
                         systemImage: defaultProfile?.hasTokens ?? false
                             ? (screenTimeManager.activeProfile == defaultProfile ? "checkmark.circle" : "circle")
                             : "plus.circle"
