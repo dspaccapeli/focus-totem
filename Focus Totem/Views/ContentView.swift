@@ -489,6 +489,8 @@ struct ContentView: View {
     
     @ViewBuilder
     private func ScannerOverlay() -> some View {
+        @State var isWiggling = false
+        
         ZStack {
             if screenTimeManager.hasSelection {
                 Image(systemName: "camera.viewfinder")
@@ -500,15 +502,31 @@ struct ContentView: View {
                 .fill(.ultraThinMaterial)
                 Image(systemName: "apps.iphone")
                     .font(.system(size: 60))
-                    .foregroundColor(.white)
-                    .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
+                    .foregroundColor(.white) //.symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true) //wiggle not available in iOS 17
+                    .rotationEffect(.degrees(isWiggling ? 2.0 : -2.0))
+                    .animation(
+                        Animation.easeInOut(duration: 0.14)
+                            .repeatForever(autoreverses: true),
+                        value: isWiggling
+                    )
+                    .onAppear {
+                        isWiggling = true
+                    }
             } else {
                 RoundedRectangle(cornerRadius: 16)
                 .fill(.ultraThinMaterial)
                 Image(systemName: "hourglass")
                     .font(.system(size: 60))
-                    .foregroundColor(.white)
-                    .symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true)
+                    .foregroundColor(.white) //.symbolEffect(.wiggle, options: .speed(0.1) .nonRepeating, isActive: true) //wiggle not available in iOS 17
+                    .rotationEffect(.degrees(isWiggling ? 2.0 : -2.0))
+                    .animation(
+                        Animation.easeInOut(duration: 0.14)
+                            .repeatForever(autoreverses: true),
+                        value: isWiggling
+                    )
+                    .onAppear {
+                        isWiggling = true
+                    }
             }
         }
     }
