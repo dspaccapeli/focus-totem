@@ -29,9 +29,22 @@
 		CC2B63D72D89DAE400040DAC /* Focus TotemUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Focus TotemUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CC40C00A2DA41A3A00528802 /* Exceptions for "Focus Totem" folder in "Focus Totem" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Focus-Totem-Info.plist",
+			);
+			target = CC2B63BA2D89DAE200040DAC /* Focus Totem */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CC2B63BD2D89DAE200040DAC /* Focus Totem */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CC40C00A2DA41A3A00528802 /* Exceptions for "Focus Totem" folder in "Focus Totem" target */,
+			);
 			path = "Focus Totem";
 			sourceTree = "<group>";
 		};
@@ -400,6 +413,7 @@
 				DEVELOPMENT_TEAM = QYQBRAV3P8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Focus-Totem-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Focus Totem";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is required to take a picture of your Focus Totem";
@@ -434,6 +448,7 @@
 				DEVELOPMENT_TEAM = QYQBRAV3P8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Focus-Totem-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Focus Totem";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is required to take a picture of your Focus Totem";
