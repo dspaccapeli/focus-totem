@@ -230,7 +230,9 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
             )
             
             // Print the similarity score to the console for debugging
+            #if DEBUG
             print("🔍 Totem similarity score: \(String(format: "%.4f", similarityScore)) (threshold: \(threshold))")
+            #endif
             
             completion(similarityScore)
         } catch {
