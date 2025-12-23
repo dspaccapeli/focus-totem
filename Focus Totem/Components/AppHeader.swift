@@ -5,9 +5,7 @@
 //  Created by Daniele Spaccapeli on 13/03/25.
 //
 
-import SwiftUICore
 import SwiftUI
-
 
 struct AppHeader: View {
     var showTagline: Bool = true
