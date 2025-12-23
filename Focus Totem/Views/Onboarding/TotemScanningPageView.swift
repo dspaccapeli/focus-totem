@@ -58,12 +58,12 @@ struct TotemScanningPageView: View {
                     
                     Text("Your totem '\(totem.name)' has been saved")
                         .font(.body)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
-                    
+
                     Text("Total totems saved: \(totems.count)")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                     
                     // Fan of captured images from the saved totem
                     ZStack {
@@ -94,7 +94,7 @@ struct TotemScanningPageView: View {
                     
                     Text("Captured from \(totem.images.count) angles")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
 
                     Button(action: {
                         // Delete all existing totems
@@ -139,13 +139,13 @@ struct TotemScanningPageView: View {
                     Text("Let's Capture Your Totem")
                         .font(.title)
                         .fontWeight(.bold)
-                        .foregroundColor(.primary)
+                        .foregroundColor(.black)
 
                     (Text("Take ")
                      + Text("at least \(requiredCaptureCount)").bold().foregroundColor(.black)
                      + Text(" pictures of your totem from different angles"))
                         .font(.body)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
                 }
                 .padding(.bottom, 40)
@@ -160,7 +160,7 @@ struct TotemScanningPageView: View {
                          ""
                         )
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                         .padding(.bottom, 10)
@@ -315,7 +315,7 @@ struct TotemScanningPageView: View {
                     VStack(spacing: 10) {
                         Text("Take more pictures or verify your totem")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.gray)
                         
                         VStack(spacing: 15) {
                             Button(action: {

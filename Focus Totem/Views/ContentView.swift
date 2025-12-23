@@ -123,6 +123,7 @@ struct ContentView: View {
                     )
                 }
         }
+        .preferredColorScheme(.light)
         .onChange(of: showingFamilyPicker) { _, _ in
             if !showingFamilyPicker {
                 // Picker was dismissed, process the selection
@@ -666,7 +667,7 @@ struct ContentView: View {
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding()
-                    .background(screenTimeManager.isBlocking ? Color.secondary : .blue)
+                    .background(screenTimeManager.isBlocking ? Color.gray : .blue)
                     .cornerRadius(10)
                     .opacity(screenTimeManager.isBlocking ? 0.6 : 1.0)
                     .symbolEffect(.bounce, options: .speed(1.5), value: defaultProfile?.hasTokens ?? false)
@@ -683,7 +684,7 @@ struct ContentView: View {
                         .font(.caption) // .font(.headline)
                         .foregroundColor(.blue) //.foregroundColor(.white)
                         .padding()
-                        // .background(screenTimeManager.isBlocking ? Color.secondary : .blue)
+                        // .background(screenTimeManager.isBlocking ? Color.gray : .blue)
                         .cornerRadius(10)
                         .opacity(screenTimeManager.isBlocking ? 0.6 : 1.0)
                 }
@@ -722,11 +723,11 @@ struct ContentView: View {
                             if let activeProfile = screenTimeManager.activeProfile {
                                 Text("Profile: \(activeProfile.name)")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.gray)
                             } else {
                                 Text("Apps selected")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.gray)
                             }
                         }
                     } else {
@@ -735,7 +736,7 @@ struct ContentView: View {
                                 .foregroundColor(.blue)
                             Text("Select which apps to block")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.gray)
                         }
                     }
                 }
@@ -745,7 +746,7 @@ struct ContentView: View {
                         .foregroundColor(.blue)
                     Text("Give Focus Totem permissions to block apps")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                 }
             }
         }

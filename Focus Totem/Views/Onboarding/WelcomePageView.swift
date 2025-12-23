@@ -30,12 +30,12 @@ struct WelcomePageView: View {
                 Text("Take control of your digital life")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(.black)
                     .multilineTextAlignment(.center)
-                
+
                 Text("In a world of endless scrolling and notifications, we spend too much time on our devices. Focus Totem helps you reclaim your attention.")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 20)
                     .fixedSize(horizontal: false, vertical: true)

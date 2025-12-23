@@ -20,7 +20,7 @@ struct FeatureRow: View {
             
             Text(text)
                 .font(.title3)
-                .foregroundColor(.primary)
+                .foregroundColor(.black)
         }
     }
 }

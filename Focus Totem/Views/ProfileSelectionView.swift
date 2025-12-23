@@ -247,7 +247,7 @@ struct ProfileRow: View {
                 
                 if profile.applicationTokenCount > 0 || profile.categoryTokenCount > 0 || profile.webDomainTokenCount > 0 {
                     Image(systemName: "checkmark")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.gray)
                 }
             }
             

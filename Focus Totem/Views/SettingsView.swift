@@ -143,7 +143,7 @@ struct SettingsView: View {
                     Text("Version")
                     Spacer()
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                 }
             }
             */
@@ -161,7 +161,7 @@ struct SettingsView: View {
                     Text("Frequently Asked Questions")
                     Spacer()
                     Image(systemName: "arrow.up.right.square")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                         .font(.caption)
                 }
             }
@@ -173,7 +173,7 @@ struct SettingsView: View {
                     Text("How to Use")
                     Spacer()
                     Image(systemName: "arrow.up.right.square")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                         .font(.caption)
                 }
             }
@@ -197,7 +197,7 @@ struct SettingsView: View {
                     Text("Emergency Unblock")
                     Spacer()
                     Text("\(remainingUnblocks) remaining")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                         .font(.caption)
                 }
             }

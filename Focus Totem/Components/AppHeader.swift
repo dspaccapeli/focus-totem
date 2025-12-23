@@ -24,7 +24,7 @@ struct AppHeader: View {
                 if showTagline {
                     Text(tagline)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                 }
             }
             

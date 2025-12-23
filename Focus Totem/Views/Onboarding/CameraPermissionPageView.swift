@@ -20,12 +20,12 @@ struct CameraPermissionPageView: View {
             Text("Camera Access Needed")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(.primary)
+                .foregroundColor(.black)
                 .multilineTextAlignment(.center)
-            
+
             Text("Focus Totem needs camera access to recognize the totem. This is how you'll control app blocking.")
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
             
@@ -53,7 +53,7 @@ struct CameraPermissionPageView: View {
                     
                     Text("Please enable camera access in Settings to continue.")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 30)

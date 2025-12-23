@@ -16,7 +16,7 @@ struct ExplanationPageView: View {
             Text("How It Works")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(.primary)
+                .foregroundColor(.black)
             
             // Main illustration
             
@@ -39,12 +39,12 @@ struct ExplanationPageView: View {
             VStack(spacing: 16) {
                 Text("A 'totem' is a real object that blocks apps")
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(.black)
                     .multilineTextAlignment(.center)
-                
+
                 Text("The best totems are objects you use daily, but don't carry with you, for example, a teapot or a door handle.")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -93,11 +93,11 @@ struct StepRow: View {
                 Text(title)
                     .font(.callout)
                     .bold()
-                    .foregroundColor(.primary)
-                
+                    .foregroundColor(.black)
+
                 Text(description)
                     .font(.footnote)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.gray)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
