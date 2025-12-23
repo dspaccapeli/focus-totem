@@ -427,7 +427,8 @@ struct ContentView: View {
                     // Always reset scanning states when sheet is dismissed
                     isTotemScanningActive = false
                     isTotemScanningLoading = false
-                    
+                    totemCaptured = false // Reset for next registration
+
                     // Force refresh camera after a short delay regardless of how the sheet was dismissed
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         forceRefreshCamera = true
@@ -797,31 +798,25 @@ struct ContentView: View {
             let fetchDescriptor = FetchDescriptor<TotemModel>(
                 sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
             )
-            
             do {
                 // Get all totems sorted by creation date (newest first)
                 let allTotems = try modelContext.fetch(fetchDescriptor)
-                
                 // Keep the most recent totem, delete all others
                 if let newTotem = allTotems.first {
-                    print("Debug: New totem has \(newTotem.getFeaturePrints().count) feature prints")
+                    // print("Debug: New totem has \(newTotem.getFeaturePrints().count) feature prints")
                     
                     // Set all totems to inactive first
                     for totem in allTotems {
                         totem.isActive = false
                     }
-                    
                     // Set the new totem as active
                     newTotem.isActive = true
-                    
                     // Delete all older totems
                     for totem in allTotems where totem != newTotem {
-                        print("Debug: Deleting old totem: \(totem.name)")
                         modelContext.delete(totem)
                     }
                     
                     try modelContext.save()
-                    
                     // Update UI on the main thread
                     await MainActor.run {
                         // Force scanner refresh by incrementing counter
