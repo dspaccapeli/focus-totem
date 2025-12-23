@@ -10,6 +10,12 @@ import Vision
 import AVFoundation
 import SwiftData
 
+enum TotemScanningState {
+    case capture
+    case verification
+    case success
+}
+
 struct TotemScanningPageView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TotemModel.createdAt) private var totems: [TotemModel]
@@ -17,25 +23,29 @@ struct TotemScanningPageView: View {
     @Binding var isScanning: Bool
     @Binding var totemCaptured: Bool
     @Binding var isLoading: Bool
-    
+
     // State variables for storing the totem feature prints
     @State private var capturedFeaturePrints: [VNFeaturePrintObservation] = []
     @State private var requiredCaptureCount = 5 // Play with this
     @State private var showInvalidImageMessage = false
     @State private var invalidImageMessageTimer: Timer?
-    @State private var isCaptureMode = true
+    @State private var scanningState: TotemScanningState = .capture
     @State private var similarityScore: Double = 0.0
     @State private var totemName: String = ""
     @State private var showingNameInput = false
     @State private var capturedImages: [UIImage] = []
-    
+    @State private var hasTriggeredNameInput = false // Prevent alert from showing multiple times
+
     var similarityThreshold: Double = 0.3 // Play with this
+
+    // Unified camera manager
+    @StateObject private var cameraManager = UnifiedCameraManager()
     
     var body: some View {
         VStack(spacing: 15) {
             Spacer()
-            
-            if totemCaptured, let totem = savedTotem {
+
+            if case .success = scanningState, let totem = savedTotem {
                 // START Success view
                 VStack(spacing: 20) {
                     Image(systemName: "checkmark.circle.fill")
@@ -85,26 +95,29 @@ struct TotemScanningPageView: View {
                     Text("Captured from \(totem.images.count) angles")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Button(action: {
                         // Delete all existing totems
                         for totem in totems {
                             modelContext.delete(totem)
                         }
                         try? modelContext.save()
-                        
+
                         // Reset the entire process
                         totemCaptured = false
                         capturedFeaturePrints = []
-                        isCaptureMode = true
+                        scanningState = .capture
                         totemName = ""
                         capturedImages = []
                         savedTotem = nil
-                        
-                        // Ensure we restart the camera
+                        hasTriggeredNameInput = false // Reset flag
+
+                        // Restart camera in capture mode
                         isScanning = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            isScanning = true
+                            cameraManager.switchMode(to: .capture) { _ in
+                                isScanning = true
+                            }
                         }
                     }) {
                         HStack {
@@ -142,7 +155,7 @@ struct TotemScanningPageView: View {
                 VStack(spacing: 15) {
                     Text(capturedFeaturePrints.isEmpty ?
                          "Center your totem in the frame and tap the camera" :
-                         isCaptureMode ?
+                         scanningState == .capture ?
                          "Take 'Picture \(capturedFeaturePrints.count + 1)' from a different angle" :
                          ""
                         )
@@ -155,86 +168,78 @@ struct TotemScanningPageView: View {
                     // Camera view for capturing totem image
                     HStack(alignment: .center) {
                         Spacer()
-                        
+
                         ZStack {
                             if isLoading {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle())
                                     .frame(width: 200, height: 200)
                             } else if isScanning {
-                                // In capture mode, we just show the camera and save the feature print on capture
-                                if isCaptureMode {
-                                    ZStack {
-                                        CaptureImageView(
-                                            isCapturing: isScanning,
-                                            onCaptureButtonTapped: captureImage
-                                        )
-                                        .frame(width: 200, height: 200)
-                                        .cornerRadius(10)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(Color.blue, lineWidth: 3)
-                                        )
-                                        .overlay(
-                                            ZStack {
-                                                Image(systemName: "camera.shutter.button")
-                                                    .font(.system(size: 60))
-                                                    .foregroundColor(.blue.opacity(0.2))
-                                            }
-                                            .allowsHitTesting(false)
-                                        )
-                                        
-                                        if !capturedImages.isEmpty {
-                                            ZStack {
-                                                ForEach(Array(capturedImages.enumerated()), id: \.offset) { index, image in
-                                                    Image(uiImage: image)
-                                                        .resizable()
-                                                        .scaledToFill()
-                                                        .frame(width: 70, height: 70)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                                        .overlay(
-                                                            RoundedRectangle(cornerRadius: 8)
-                                                                .stroke(Color.blue, lineWidth: 2)
-                                                        )
-                                                        .shadow(radius: 3)
-                                                        .rotationEffect(.degrees(index % 2 == 0 ? 
-                                                            Double((index + 1) * 7) : 
-                                                            Double((index + 1) * -7)))
-                                                        .offset(x: 120)
+                                // Use unified camera view for both modes
+                                ZStack {
+                                    UnifiedCameraView(
+                                        cameraManager: cameraManager,
+                                        mode: scanningState == .capture ? .capture : .verification,
+                                        onTapToCapture: scanningState == .capture ? captureImage : nil,
+                                        onVerificationResult: scanningState == .capture ? nil : { score in
+                                            similarityScore = score
+                                            if score >= similarityThreshold && !hasTriggeredNameInput {
+                                                hasTriggeredNameInput = true
+                                                showingNameInput = true
+                                            } else if score < similarityThreshold && !hasTriggeredNameInput {
+                                                showInvalidImageMessage = true
+                                                invalidImageMessageTimer?.invalidate()
+                                                invalidImageMessageTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
+                                                    showInvalidImageMessage = false
                                                 }
                                             }
-                                        }
-                                    }
-                                } else if !capturedFeaturePrints.isEmpty {
-                                    // In verification mode, we use the similarity scanner to verify the capture worked
-                                    ImageSimilarityScanner(
-                                        isScanning: isScanning,
-                                        similarityScore: $similarityScore,
-                                        referenceFeaturePrints: capturedFeaturePrints,
-                                        threshold: similarityThreshold,
-                                        captureFrequency: 0.2,
-                                        onInvalidMatch: {
-                                            showInvalidImageMessage = true
-                                            invalidImageMessageTimer?.invalidate()
-                                            invalidImageMessageTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
-                                                showInvalidImageMessage = false
-                                            }
                                         },
-                                        onValidMatch: { score in
-                                            // Show name input dialog
-                                            showingNameInput = true
-                                        }
+                                        referenceFeaturePrints: capturedFeaturePrints,
+                                        verificationThreshold: similarityThreshold,
+                                        captureFrequency: 0.2
                                     )
                                     .frame(width: 200, height: 200)
                                     .cornerRadius(10)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 10)
-                                            .inset(by: showInvalidImageMessage ? -4 : 0)
-                                            // .stroke(showInvalidImageMessage ? .red : .blue,
-                                            //    lineWidth: showInvalidImageMessage ? 6 : 3)
-                                            .stroke(Color.blue.opacity(similarityScore <= 0 ? 0.1 : 0.1 + pow(similarityScore / similarityThreshold, 2) * 0.9),
-                                                    lineWidth: similarityScore <= 0 ? 3 : 3 + (similarityScore / similarityThreshold) * 3)
+                                            .stroke(
+                                                scanningState == .capture ? Color.blue :
+                                                    Color.blue.opacity(similarityScore <= 0 ? 0.1 : 0.1 + pow(similarityScore / similarityThreshold, 2) * 0.9),
+                                                lineWidth: scanningState == .capture ? 3 : (similarityScore <= 0 ? 3 : 3 + (similarityScore / similarityThreshold) * 3)
+                                            )
                                     )
+
+                                    // Overlay for capture mode
+                                    if scanningState == .capture {
+                                        ZStack {
+                                            Image(systemName: "camera.shutter.button")
+                                                .font(.system(size: 60))
+                                                .foregroundColor(.blue.opacity(0.2))
+                                        }
+                                        .allowsHitTesting(false)
+                                    }
+
+                                    // Show captured images in capture mode
+                                    if scanningState == .capture && !capturedImages.isEmpty {
+                                        ZStack {
+                                            ForEach(Array(capturedImages.enumerated()), id: \.offset) { index, image in
+                                                Image(uiImage: image)
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(width: 70, height: 70)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 8)
+                                                            .stroke(Color.blue, lineWidth: 2)
+                                                    )
+                                                    .shadow(radius: 3)
+                                                    .rotationEffect(.degrees(index % 2 == 0 ?
+                                                        Double((index + 1) * 7) :
+                                                        Double((index + 1) * -7)))
+                                                    .offset(x: 120)
+                                            }
+                                        }
+                                    }
                                 }
                             } else {
                                 // Placeholder when not scanning
@@ -242,7 +247,7 @@ struct TotemScanningPageView: View {
                                     RoundedRectangle(cornerRadius: 10)
                                         .fill(Color.black.opacity(0.05))
                                         .frame(width: 200, height: 200)
-                                    
+
                                     Image(systemName: "camera.viewfinder")
                                         .font(.system(size: 80))
                                         .foregroundColor(Color.blue.opacity(0.3))
@@ -253,11 +258,11 @@ struct TotemScanningPageView: View {
                                 )
                             }
                         }
-                        
+
                         Spacer()
                     }
                     
-                    if !isCaptureMode {
+                    if scanningState == .verification {
                         if showInvalidImageMessage {
                             /*
                             Text("Totem not yet recognized")
@@ -267,16 +272,12 @@ struct TotemScanningPageView: View {
                                 .padding(.horizontal, 20)
                              */
                         }
-                        
+
                         Button(action: {
                             // Switch back to capture mode
-                            isCaptureMode = true
-                            
-                            // Ensure we're still scanning when transitioning to capture mode
-                            isScanning = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                isScanning = true
-                            }
+                            scanningState = .capture
+                            similarityScore = 0
+                            hasTriggeredNameInput = false // Reset flag
                         }) {
                             HStack {
                                 Image(systemName: "photo.badge.plus")
@@ -319,25 +320,19 @@ struct TotemScanningPageView: View {
                         VStack(spacing: 15) {
                             Button(action: {
                                 // Switch to verification mode
-                                isCaptureMode = false
-                                similarityScore = 0 // Reset similarity score for new verification attempt
-                                
-                                // Ensure we're still scanning when transitioning to verification mode
-                                // This is necessary because the camera needs to restart in verification mode
-                                isScanning = false
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    isScanning = true
-                                }
+                                scanningState = .verification
+                                similarityScore = 0
+                                hasTriggeredNameInput = false // Reset flag when starting verification
                             }) {
                                 Text("Verify Totem")
                                     .font(.headline)
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 24)
                                     .padding(.vertical, 12)
-                                    .background(Color.blue.opacity(isCaptureMode ? 1.0 : 0.5))
+                                    .background(Color.blue.opacity(scanningState == .capture ? 1.0 : 0.5))
                                     .cornerRadius(10)
                             }
-                            .disabled(!isCaptureMode)
+                            .disabled(scanningState != .capture)
                             /*
                             Button(action: captureImage) {
                                 Text("Take More Pictures")
@@ -357,13 +352,9 @@ struct TotemScanningPageView: View {
                             // Reset the captured feature prints to allow retaking the photos
                             capturedFeaturePrints = []
                             capturedImages = []
-                            isCaptureMode = true  // Ensure we're in capture mode
-                            
-                            // Restart the camera session to ensure it's ready for the next capture
-                            isScanning = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                isScanning = true
-                            }
+                            scanningState = .capture
+                            similarityScore = 0
+                            hasTriggeredNameInput = false // Reset flag
                         }) {
                             HStack {
                                 Image(systemName: "arrow.counterclockwise")
@@ -398,21 +389,22 @@ struct TotemScanningPageView: View {
         }
         .padding(.horizontal, 30)
         .onAppear {
-            // Ensure the camera is initialized when the view appears
-            if !isScanning {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isScanning = true
-                }
-            }
+            // Camera automatically starts via UnifiedCameraView
+            isScanning = true
         }
         .alert("Name Your Totem", isPresented: $showingNameInput) {
             TextField("Totem Name", text: $totemName)
             Button("Cancel", role: .cancel) {
+                // Reset to verification mode to try again
                 totemName = ""
+                scanningState = .verification
+                similarityScore = 0
+                hasTriggeredNameInput = false // Allow alert to show again if verified again
             }
             Button("Save") {
                 saveTotem()
             }
+            .disabled(totemName.trimmingCharacters(in: .whitespaces).isEmpty)
         } message: {
             Text("Give your totem a name to help you remember what object to use.")
         }
@@ -421,24 +413,44 @@ struct TotemScanningPageView: View {
     // MARK: - Actions
     
     private func captureImage() {
-        guard isScanning else { return }
-        
+        guard isScanning else {
+            #if DEBUG
+            print("⚠️ Not scanning, ignoring capture")
+            #endif
+            return
+        }
+
+        #if DEBUG
+        print("📸 captureImage() triggered")
+        #endif
         isLoading = true
-        
-        // Use the CaptureImageViewController directly to take a photo
-        CaptureImageViewController.shared.capturePhoto { result in
+
+        // Use unified camera manager to capture photo
+        cameraManager.capturePhoto { result in
             switch result {
             case .success(let image):
+                #if DEBUG
+                print("✅ Photo captured successfully, size: \(image.size)")
+                #endif
                 // Save the captured image
                 self.capturedImages.append(image)
-                
+                #if DEBUG
+                print("📦 Total captured images: \(self.capturedImages.count)")
+                #endif
+
                 // Process the captured image
                 ImageSimilarityHelper.processImage(image) { featurePrint in
                     DispatchQueue.main.async {
                         if let featurePrint = featurePrint {
                             // Add the new feature print to our collection
                             self.capturedFeaturePrints.append(featurePrint)
+                            #if DEBUG
+                            print("✅ Feature print added. Total: \(self.capturedFeaturePrints.count)")
+                            #endif
                         } else {
+                            #if DEBUG
+                            print("❌ Failed to generate feature print")
+                            #endif
                             // Show error if feature print generation failed
                             self.showInvalidImageMessage = true
                             self.invalidImageMessageTimer?.invalidate()
@@ -451,10 +463,12 @@ struct TotemScanningPageView: View {
                         self.isLoading = false
                     }
                 }
-                
+
             case .failure(let error):
                 DispatchQueue.main.async {
-                    print("Error capturing photo: \(error.localizedDescription)")
+                    #if DEBUG
+                    print("❌ Error capturing photo: \(error.localizedDescription)")
+                    #endif
                     self.showInvalidImageMessage = true
                     self.invalidImageMessageTimer?.invalidate()
                     self.invalidImageMessageTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
@@ -467,170 +481,62 @@ struct TotemScanningPageView: View {
     }
     
     private func saveTotem() {
+        #if DEBUG
+        print("💾 Saving totem with name: '\(totemName)'")
+        print("💾 Feature prints: \(capturedFeaturePrints.count), Images: \(capturedImages.count)")
+        #endif
+
         // Convert all captured images to JPEG data
         let imageDataArray = capturedImages.map { $0.jpegData(compressionQuality: 0.7) }
-        
+
         // Create and save the totem model
         let totem = TotemModel(
             name: totemName,
             featurePrints: capturedFeaturePrints,
             imageDataArray: imageDataArray.compactMap { $0 } // Remove any nil values
         )
-        
-        // Insert the totem into the model context
+
+        // Delete all old totems BEFORE inserting new one
+        #if DEBUG
+        print("🗑️ Deleting \(totems.count) old totem(s)")
+        #endif
+        for oldTotem in totems {
+            #if DEBUG
+            print("🗑️ Deleting: \(oldTotem.name)")
+            #endif
+            modelContext.delete(oldTotem)
+        }
+
+        // Insert the new totem into the model context
         modelContext.insert(totem)
-        try? modelContext.save()
-        
-        // Save reference to the saved totem
+
+        // Set new totem as active
+        totem.isActive = true
+
+        do {
+            try modelContext.save()
+            #if DEBUG
+            print("✅ Totem saved successfully to database")
+            #endif
+        } catch {
+            #if DEBUG
+            print("❌ Failed to save totem: \(error)")
+            #endif
+        }
+
+        // Save reference to the saved totem and transition to success state
         savedTotem = totem
-        
-        // Mark the totem as captured and ready to use
+        scanningState = .success
+
+        // Stop camera to prevent further verification triggers
+        isScanning = false
+        cameraManager.stopSession()
+
+        // Auto-complete registration after successful save
         totemCaptured = true
-    }
-}
-
-// Simple view for capturing a single image
-struct CaptureImageView: UIViewControllerRepresentable {
-    let isCapturing: Bool
-    var onCaptureButtonTapped: () -> Void
-    
-    func makeUIViewController(context: Context) -> CaptureImageViewController {
-        let vc = CaptureImageViewController.shared
-        vc.onTapGesture = onCaptureButtonTapped
-        return vc
-    }
-    
-    func updateUIViewController(_ uiViewController: CaptureImageViewController, context: Context) {
-        if isCapturing {
-            uiViewController.startCapture()
-        } else {
-            uiViewController.stopCapture()
-        }
-    }
-}
-
-class CaptureImageViewController: UIViewController, AVCapturePhotoCaptureDelegate {
-    static let shared = CaptureImageViewController()
-    
-    private var captureSession: AVCaptureSession?
-    private var previewLayer: AVCaptureVideoPreviewLayer?
-    private var photoOutput: AVCapturePhotoOutput?
-    private var currentCaptureCompletion: ((Result<UIImage, Error>) -> Void)?
-    var onTapGesture: (() -> Void)?
-    
-    private override init(nibName nibNameOrNil: String? = nil, bundle nibBundleOrNil: Bundle? = nil) {
-        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
-        setupCaptureSession()
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        // Add tap gesture recognizer for manual capture
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap))
-        view.addGestureRecognizer(tapGesture)
-    }
-    
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        previewLayer?.frame = view.layer.bounds
-    }
-    
-    private func setupCaptureSession() {
-        captureSession = AVCaptureSession()
-        guard let captureSession = self.captureSession else { return }
-        
-        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let input = try? AVCaptureDeviceInput(device: camera) else {
-            return
-        }
-        
-        if captureSession.canAddInput(input) {
-            captureSession.addInput(input)
-        }
-        
-        // Setup preview layer
-        previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        previewLayer?.videoGravity = .resizeAspectFill
-        if let previewLayer = previewLayer {
-            view.layer.addSublayer(previewLayer)
-            previewLayer.frame = view.layer.bounds
-        }
-        
-        // Setup photo output
-        photoOutput = AVCapturePhotoOutput()
-        if let photoOutput = photoOutput, captureSession.canAddOutput(photoOutput) {
-            captureSession.addOutput(photoOutput)
-        }
-    }
-    
-    func startCapture() {
-        if captureSession?.isRunning == false {
-            // Ensure we're starting the capture session on a background thread
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                self?.captureSession?.startRunning()
-                
-                // Log that the session has started
-                DispatchQueue.main.async {
-                    print("Camera session started")
-                }
-            }
-        }
-    }
-    
-    func stopCapture() {
-        if captureSession?.isRunning == true {
-            // Stop the capture session
-            captureSession?.stopRunning()
-            print("Camera session stopped")
-        }
-    }
-    
-    @objc private func handleTap() {
-        // Call the tap gesture handler
-        onTapGesture?()
-    }
-    
-    func capturePhoto(completion: @escaping (Result<UIImage, Error>) -> Void) {
-        guard let photoOutput = self.photoOutput, captureSession?.isRunning == true else {
-            let error = NSError(domain: "CaptureImageViewController", code: 1, userInfo: [NSLocalizedDescriptionKey: "Capture session is not running"])
-            completion(.failure(error))
-            return
-        }
-        
-        // Store the completion handler for use in the delegate method
-        currentCaptureCompletion = completion
-        
-        // Ensure we're on the main thread
-        DispatchQueue.main.async {
-            let settings = AVCapturePhotoSettings()
-            photoOutput.capturePhoto(with: settings, delegate: self)
-        }
-    }
-    
-    // MARK: - AVCapturePhotoCaptureDelegate
-    
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        if let error = error {
-            currentCaptureCompletion?(.failure(error))
-            currentCaptureCompletion = nil
-            return
-        }
-        
-        guard let imageData = photo.fileDataRepresentation(),
-              let image = UIImage(data: imageData) else {
-            let error = NSError(domain: "CaptureImageViewController", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to create image from captured data"])
-            currentCaptureCompletion?(.failure(error))
-            currentCaptureCompletion = nil
-            return
-        }
-        
-        currentCaptureCompletion?(.success(image))
-        currentCaptureCompletion = nil
+        #if DEBUG
+        print("✅ Totem saved and registration marked complete")
+        #endif
     }
 }
 
