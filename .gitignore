@@ -27,3 +27,30 @@ Pods/
 
 .vscode
 .windsurfrules
+
+## website/ ##
+
+website/*.log
+website/.DS_Store
+website/.env
+website/.env.backup
+website/.env.production
+website/.phpactor.json
+website/.phpunit.result.cache
+website/.fleet
+website/.idea
+website/.nova
+website/.phpunit.cache
+website/.vscode
+website/.zed
+website/auth.json
+website/node_modules
+website/public/build
+website/public/hot
+website/public/storage
+website/storage/*.key
+website/storage/pail
+website/vendor
+website/Homestead.json
+website/Homestead.yaml
+website/Thumbs.db
