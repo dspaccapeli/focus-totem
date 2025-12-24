@@ -4,7 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 
 <template>
     <Head title="Privacy Policy" />
-    <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div class="min-h-screen bg-white dark:bg-gray-900">
         <!-- Navigation -->
         <nav class="container mx-auto px-6 py-6">
             <div class="flex items-center justify-between">

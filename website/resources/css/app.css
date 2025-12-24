@@ -87,6 +87,10 @@
             'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
             'Noto Color Emoji';
     }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: Impact, 'Arial Narrow Bold', sans-serif !important;
+    }
 }
 
 :root {
