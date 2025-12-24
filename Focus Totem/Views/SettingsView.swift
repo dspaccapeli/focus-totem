@@ -15,10 +15,11 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @ObservedObject var screenTimeManager: ScreenTimeManager
     @Query private var totems: [TotemModel] // Added query for TotemModel
-    
+    @StateObject private var notificationManager = NotificationManager.shared
+
     // Callback function for emergency unblock
     var onEmergencyUnblock: () -> Void
-    
+
     // State variables
     @State private var showingUnblockConfirmation = false
     @State private var showingNoMoreUnblocksAlert = false
@@ -132,9 +133,10 @@ struct SettingsView: View {
     private func SettingsContentView() -> some View {
         List {
             SupportSection()
+            NotificationSection()
             TotemManagementSection()
             EmergencySection()
-            
+
             /*
             Section(header: Text("About")) {
                 HStack {
@@ -165,7 +167,7 @@ struct SettingsView: View {
                         .font(.caption)
                 }
             }
-            
+
             Link(destination: URL(string: "https://deliberate.app/how-to-use")!) {
                 HStack {
                     Image(systemName: "book.circle")
@@ -175,6 +177,62 @@ struct SettingsView: View {
                     Image(systemName: "arrow.up.right.square")
                         .foregroundColor(.gray)
                         .font(.caption)
+                }
+            }
+        }
+    }
+
+    // Notification Section
+    @ViewBuilder
+    private func NotificationSection() -> some View {
+        Section(header: Text("Reminders"),
+                footer: Text("Gentle reminders help you build consistent focus habits by breaking automatic phone usage patterns. Research shows external cues significantly improve habit formation.")) {
+            Toggle(isOn: $notificationManager.notificationsEnabled) {
+                HStack {
+                    Image(systemName: "bell.fill")
+                        .foregroundColor(.blue)
+                    Text("Focus Reminders")
+                }
+            }
+            .disabled(notificationManager.notificationPermissionStatus != .authorized)
+
+            if notificationManager.notificationPermissionStatus == .denied {
+                Button(action: {
+                    notificationManager.openSettings()
+                }) {
+                    HStack {
+                        Image(systemName: "gear")
+                            .foregroundColor(.orange)
+                        Text("Enable in Settings")
+                        Spacer()
+                        Image(systemName: "arrow.up.right.square")
+                            .foregroundColor(.gray)
+                            .font(.caption)
+                    }
+                }
+            } else if notificationManager.notificationPermissionStatus == .notDetermined {
+                Button(action: {
+                    Task {
+                        await notificationManager.requestNotificationPermission()
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "bell.badge")
+                            .foregroundColor(.blue)
+                        Text("Allow Notifications")
+                        Spacer()
+                    }
+                }
+            }
+
+            if notificationManager.notificationsEnabled {
+                Picker("Frequency", selection: Binding(
+                    get: { notificationManager.getNotificationFrequency() },
+                    set: { notificationManager.setNotificationFrequency($0) }
+                )) {
+                    ForEach(NotificationManager.NotificationFrequency.allCases, id: \.self) { frequency in
+                        Text(frequency.rawValue).tag(frequency)
+                    }
                 }
             }
         }

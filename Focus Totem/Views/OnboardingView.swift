@@ -22,13 +22,15 @@ struct OnboardingView: View {
         static let explanation = 1
         static let cameraPermission = 2
         static let totemScanning = 3
+        static let notificationPermission = 4
     }
 
-    private let pageCount = 4
+    private let pageCount = 5
     
     @State private var currentPage = Page.welcome
     @State private var cameraPermissionGranted = false
     @State private var totemCaptured = false
+    @State private var notificationPermissionGranted = false
     @State private var isScanning = false
     @State private var isLoading = false
     @State private var showTotemScanner = false
@@ -82,6 +84,22 @@ struct OnboardingView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+
+                    NotificationPermissionPageView(
+                        notificationPermissionGranted: $notificationPermissionGranted,
+                        onSkip: {
+                            // Save onboarding completion status to UserDefaults
+                            UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+
+                            // Store the completion date
+                            UserDefaults.standard.set(Date(), forKey: "onboardingCompletionDate")
+
+                            // Complete onboarding
+                            hasCompletedOnboarding = true
+                        }
+                    )
+                    .opacity(currentPage == Page.notificationPermission ? 1 : 0)
+                    .offset(x: currentPage == Page.notificationPermission ? 0 : (currentPage < Page.notificationPermission ? screenWidth : -screenWidth))
                 }
                 .animation(.easeInOut(duration: 0.3), value: currentPage)
                 
@@ -131,15 +149,15 @@ struct OnboardingView: View {
                         } else if currentPage == Page.cameraPermission && cameraPermissionGranted {
                             // First show loading state
                             isLoading = true
-                            
+
                             withAnimation {
                                 currentPage = Page.totemScanning
                             }
-                            
+
                             // Initialize the scanner view and start scanning after a slight delay
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 showTotemScanner = true
-                                
+
                                 // Give a little more time for the view to initialize before starting scanning
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                     isScanning = true
@@ -147,20 +165,24 @@ struct OnboardingView: View {
                                 }
                             }
                         } else if currentPage == Page.totemScanning && totemCaptured {
+                            withAnimation {
+                                currentPage = Page.notificationPermission
+                            }
+                        } else if currentPage == Page.notificationPermission {
                             // Save onboarding completion status to UserDefaults
                             UserDefaults.standard.set(true, forKey: "onboardingCompleted")
-                            
+
                             // Store the completion date
                             UserDefaults.standard.set(Date(), forKey: "onboardingCompletionDate")
-                            
+
                             // Complete onboarding
                             hasCompletedOnboarding = true
                         }
                     }) {
                         HStack {
-                            Text(currentPage < Page.totemScanning ? "Next" : "Done")
-                            if totemCaptured || currentPage < Page.totemScanning { 
-                                Image(systemName: currentPage < Page.totemScanning ? "chevron.right" : "checkmark")
+                            Text(currentPage < Page.notificationPermission ? "Next" : "Done")
+                            if (totemCaptured && currentPage == Page.totemScanning) || currentPage < Page.totemScanning || currentPage == Page.notificationPermission {
+                                Image(systemName: currentPage < Page.notificationPermission ? "chevron.right" : "checkmark")
                                     .font(.body)
                             }
                         }
@@ -168,13 +190,13 @@ struct OnboardingView: View {
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
                         .background(
-                            (currentPage == Page.cameraPermission && !cameraPermissionGranted) || 
-                            (currentPage == Page.totemScanning && !totemCaptured) || isLoading ? 
+                            (currentPage == Page.cameraPermission && !cameraPermissionGranted) ||
+                            (currentPage == Page.totemScanning && !totemCaptured) || isLoading ?
                             Color.gray : Color.blue
                         )
                         .cornerRadius(10)
                     }
-                    .disabled((currentPage == Page.cameraPermission && !cameraPermissionGranted) || 
+                    .disabled((currentPage == Page.cameraPermission && !cameraPermissionGranted) ||
                               (currentPage == Page.totemScanning && !totemCaptured) || isLoading)
                 }
                 .padding(.horizontal, 20)
