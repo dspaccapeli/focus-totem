@@ -141,6 +141,9 @@ import { Head } from '@inertiajs/vue3';
                     <a href="/privacy-policy" class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                         Privacy Policy
                     </a>
+                    <a href="mailto:buildusefulstuff+focustotem@gmail.com" class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                        Contact
+                    </a>
                 </div>
             </div>
         </footer>
