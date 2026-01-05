@@ -136,10 +136,10 @@ struct TotemScanningPageView: View {
             } else {
                 // START Header View
                 VStack(spacing: 15) {
-                    Text("Let's Capture Your Totem")
-                        .font(.title)
+                    Text("Let's Capture Your Totem".uppercased())
+                        .font(.custom("Impact", size: 22))
                         .fontWeight(.bold)
-                        .foregroundColor(.black)
+                        .foregroundColor(Color(.darkGray))
 
                     (Text("Take ")
                      + Text("at least \(requiredCaptureCount)").bold().foregroundColor(.black)
@@ -148,7 +148,7 @@ struct TotemScanningPageView: View {
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
                 }
-                .padding(.bottom, 40)
+                .padding(.bottom, 30)
                 // END Header View
                 
                 // START Camera view

@@ -17,10 +17,10 @@ struct CameraPermissionPageView: View {
         VStack(spacing: 20) {
             Spacer()
             
-            Text("Camera Access Needed")
-                .font(.title2)
+            Text("Camera Access Needed".uppercased())
+                .font(.custom("Impact", size: 22))
                 .fontWeight(.bold)
-                .foregroundColor(.black)
+                .foregroundColor(Color(.darkGray))
                 .multilineTextAlignment(.center)
 
             Text("Focus Totem needs camera access to recognize the totem. This is how you'll control app blocking.")

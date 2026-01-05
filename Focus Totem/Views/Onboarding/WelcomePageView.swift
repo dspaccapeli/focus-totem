@@ -28,9 +28,8 @@ struct WelcomePageView: View {
             
             VStack(spacing: 10) {
                 Text("Take control of your digital life")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.black)
+                    .font(.custom("Impact", size: 22))
+                    .foregroundColor(Color(.darkGray))
                     .multilineTextAlignment(.center)
 
                 Text("In a world of endless scrolling and notifications, we spend too much time on our devices. Focus Totem helps you reclaim your attention.")

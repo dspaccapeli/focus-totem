@@ -15,16 +15,15 @@ struct AppHeader: View {
     var body: some View {
         HStack {
             VStack {
-                Text("Focus Totem")
-                    .font(.title2)
-                    .bold()
+                Text("Focus Totem".uppercased())
+                    .font(.custom("Impact", size: 28))
                     .foregroundColor(.blue)
-                    //.font(.custom("IowanOldStyle-Bold", size: 30))
                 
                 if showTagline {
                     Text(tagline)
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(Color(.darkGray))
+                        .fontWeight(.medium)
                 }
             }
             

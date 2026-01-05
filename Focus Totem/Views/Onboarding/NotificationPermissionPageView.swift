@@ -14,7 +14,7 @@ struct NotificationPermissionPageView: View {
     var onSkip: (() -> Void)? = nil
 
     var body: some View {
-        VStack(spacing: 30) {
+        VStack(spacing: 20) {
             Spacer()
 
             // Icon
@@ -35,11 +35,17 @@ struct NotificationPermissionPageView: View {
 
             // Description
             VStack(spacing: 16) {
+                Text("Build a Focus Habit.")
+                    .font(.custom("Impact", size: 22))
+                    .foregroundColor(Color(.darkGray))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 10)
+                
                 Text("Gentle reminders help you remember to use your totem and build lasting focus habits.")
                     .font(.body)
-                    .multilineTextAlignment(.center)
                     .foregroundColor(.gray)
-                    .padding(.horizontal, 20)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 // Educational section
                 VStack(alignment: .leading, spacing: 12) {
